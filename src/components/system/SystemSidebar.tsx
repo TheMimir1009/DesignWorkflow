@@ -19,7 +19,6 @@ export interface SystemSidebarProps {
 
 export function SystemSidebar({ isCollapsed = false, onToggleCollapse }: SystemSidebarProps) {
   const {
-    documents,
     isLoading,
     error,
     searchQuery,
@@ -35,7 +34,7 @@ export function SystemSidebar({ isCollapsed = false, onToggleCollapse }: SystemS
     getAllTags,
   } = useSystemStore();
 
-  const { currentProjectId, currentProject } = useProjectStore();
+  const { currentProjectId } = useProjectStore();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<SystemDocument | null>(null);

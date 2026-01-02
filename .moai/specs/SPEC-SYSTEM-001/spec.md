@@ -8,7 +8,7 @@
 | 제목 | 시스템 문서 관리 기능 (System Document Management) |
 | PRD Phase | 2 - System Document Management |
 | 생성일 | 2026-01-02 |
-| 상태 | Planned |
+| 상태 | Completed |
 | 우선순위 | High |
 | 의존성 | SPEC-PROJECT-001 (완료) |
 | 담당 에이전트 | expert-backend, expert-frontend |

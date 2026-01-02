@@ -18,7 +18,7 @@ vi.mock('../../src/services/systemDocService.ts', () => ({
 }));
 
 // Import after mocking
-import { useSystemStore, type SystemStore } from '../../src/store/systemStore.ts';
+import { useSystemStore } from '../../src/store/systemStore.ts';
 import * as systemDocService from '../../src/services/systemDocService.ts';
 
 describe('System Store', () => {

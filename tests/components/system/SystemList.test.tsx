@@ -41,10 +41,10 @@ describe('SystemList', () => {
     },
   ];
 
-  const documentsByCategory: Record<string, SystemDocument[]> = {
+  const getDocumentsByCategory = (): Record<string, SystemDocument[]> => ({
     System: [mockDocuments[0], mockDocuments[2]],
     UI: [mockDocuments[1]],
-  };
+  });
 
   const mockOnToggleCategory = vi.fn();
   const mockOnPreview = vi.fn();
@@ -74,19 +74,13 @@ describe('SystemList', () => {
   it('should render categories sorted alphabetically', () => {
     render(
       <SystemList
-        documentsByCategory={documentsByCategory}
+        documentsByCategory={getDocumentsByCategory()}
         expandedCategories={[]}
         onToggleCategory={mockOnToggleCategory}
         onPreview={mockOnPreview}
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
       />
-    );
-
-    const categoryButtons = screen.getAllByRole('button');
-    // Filter to get only category toggle buttons (exclude action buttons)
-    const categories = categoryButtons.filter(btn =>
-      btn.textContent?.includes('System') || btn.textContent?.includes('UI')
     );
 
     // Should have System and UI categories
@@ -97,7 +91,7 @@ describe('SystemList', () => {
   it('should display document count for each category', () => {
     render(
       <SystemList
-        documentsByCategory={documentsByCategory}
+        documentsByCategory={getDocumentsByCategory()}
         expandedCategories={[]}
         onToggleCategory={mockOnToggleCategory}
         onPreview={mockOnPreview}
@@ -115,7 +109,7 @@ describe('SystemList', () => {
   it('should call onToggleCategory when category header is clicked', () => {
     render(
       <SystemList
-        documentsByCategory={documentsByCategory}
+        documentsByCategory={getDocumentsByCategory()}
         expandedCategories={[]}
         onToggleCategory={mockOnToggleCategory}
         onPreview={mockOnPreview}
@@ -133,7 +127,7 @@ describe('SystemList', () => {
   it('should show documents when category is expanded', () => {
     render(
       <SystemList
-        documentsByCategory={documentsByCategory}
+        documentsByCategory={getDocumentsByCategory()}
         expandedCategories={['System']}
         onToggleCategory={mockOnToggleCategory}
         onPreview={mockOnPreview}
@@ -149,7 +143,7 @@ describe('SystemList', () => {
   it('should hide documents when category is collapsed', () => {
     render(
       <SystemList
-        documentsByCategory={documentsByCategory}
+        documentsByCategory={getDocumentsByCategory()}
         expandedCategories={[]}
         onToggleCategory={mockOnToggleCategory}
         onPreview={mockOnPreview}
@@ -166,7 +160,7 @@ describe('SystemList', () => {
   it('should expand multiple categories simultaneously', () => {
     render(
       <SystemList
-        documentsByCategory={documentsByCategory}
+        documentsByCategory={getDocumentsByCategory()}
         expandedCategories={['System', 'UI']}
         onToggleCategory={mockOnToggleCategory}
         onPreview={mockOnPreview}

@@ -3,7 +3,7 @@
  * Tests for the system document creation modal
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SystemCreateModal } from '../../../src/components/system/SystemCreateModal';
 import { useSystemStore } from '../../../src/store/systemStore';
@@ -26,11 +26,11 @@ describe('SystemCreateModal', () => {
 
     mockUseSystemStore.mockReturnValue({
       createDocument: mockCreateDocument,
-    } as any);
+    } as ReturnType<typeof useSystemStore>);
 
     mockUseProjectStore.mockReturnValue({
       currentProjectId: 'project-123',
-    } as any);
+    } as ReturnType<typeof useProjectStore>);
   });
 
   afterEach(() => {
