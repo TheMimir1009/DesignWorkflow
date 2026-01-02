@@ -205,3 +205,20 @@ export interface DropResult {
   sourceStatus: TaskStatus;
   targetStatus: TaskStatus;
 }
+
+// Project DTOs for API operations
+export interface CreateProjectDto {
+  name: string;
+  description?: string;
+  techStack?: string[];
+  categories?: string[];
+  defaultReferences?: string[];
+}
+
+export interface UpdateProjectDto {
+  name?: string;
+  description?: string;
+  techStack?: string[];
+  categories?: string[];
+  defaultReferences?: string[];
+}
