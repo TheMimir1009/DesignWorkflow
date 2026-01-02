@@ -5,6 +5,7 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import { projectsRouter } from './routes/projects.ts';
+import { systemsRouter } from './routes/systems.ts';
 
 /**
  * Create and configure Express application
@@ -19,6 +20,7 @@ export function createApp(): Express {
 
   // Routes
   app.use('/api/projects', projectsRouter);
+  app.use('/api/projects/:projectId/systems', systemsRouter);
 
   return app;
 }
