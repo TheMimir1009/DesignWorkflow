@@ -6,7 +6,7 @@
 |------|-----|
 | SPEC ID | SPEC-SETUP-001 |
 | 제목 | AI Workflow Kanban - 개발 환경 구축 |
-| 상태 | Planned |
+| 상태 | Completed |
 | 우선순위 | High |
 | 생성일 | 2026-01-02 |
 | 범위 | PRD Phase 1.1 - 1.4 |
