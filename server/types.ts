@@ -45,3 +45,38 @@ export interface ValidationResult {
   valid: boolean;
   error?: string;
 }
+
+/**
+ * CreateSystemDocumentDto - Request body for creating a new system document
+ * @property name - Required, 1-100 characters
+ * @property category - Required, 1-50 characters
+ * @property tags - Optional array of tag strings
+ * @property content - Optional markdown content
+ * @property dependencies - Optional array of system document IDs
+ */
+export interface CreateSystemDocumentDto {
+  name: string;
+  category: string;
+  tags?: string[];
+  content?: string;
+  dependencies?: string[];
+}
+
+/**
+ * UpdateSystemDocumentDto - Request body for updating a system document
+ * All fields are optional, only provided fields will be updated
+ */
+export interface UpdateSystemDocumentDto {
+  name?: string;
+  category?: string;
+  tags?: string[];
+  content?: string;
+  dependencies?: string[];
+}
+
+/**
+ * DeleteSystemDocumentResponse - Response body for delete operation
+ */
+export interface DeleteSystemDocumentResponse {
+  deleted: boolean;
+}

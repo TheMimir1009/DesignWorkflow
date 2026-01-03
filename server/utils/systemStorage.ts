@@ -1,287 +1,288 @@
 /**
- * System Storage Utilities
+ * System Document Storage Utilities
  * File system operations for system document persistence
  */
 import fs from 'fs/promises';
 import path from 'path';
 import type { SystemDocument } from '../../src/types/index.ts';
+import type { CreateSystemDocumentDto, UpdateSystemDocumentDto } from '../types.ts';
 import { WORKSPACE_PATH } from './projectStorage.ts';
 
 /**
- * Type for system document metadata (stored in systems.json without content)
- */
-type SystemDocumentMetadata = Omit<SystemDocument, 'content'>;
-
-/**
- * Get the systems directory path for a project
+ * Get systems directory path for a project
  * @param projectId - Project UUID
+ * @returns Path to the systems directory
  */
-function getSystemsPath(projectId: string): string {
+export function getSystemsPath(projectId: string): string {
   return path.join(WORKSPACE_PATH, projectId, 'systems');
 }
 
 /**
- * Get the metadata file path for a project
+ * Get systems.json path for a project
  * @param projectId - Project UUID
+ * @returns Path to systems.json
  */
-function getMetadataPath(projectId: string): string {
+export function getSystemsJsonPath(projectId: string): string {
   return path.join(getSystemsPath(projectId), 'systems.json');
 }
 
 /**
- * Get the content file path for a system document
+ * Get content file path for a system document
  * @param projectId - Project UUID
- * @param documentId - System document UUID
+ * @param systemId - System document UUID
+ * @returns Path to the content markdown file
  */
-function getContentPath(projectId: string, documentId: string): string {
-  return path.join(getSystemsPath(projectId), `${documentId}.md`);
+export function getSystemContentPath(projectId: string, systemId: string): string {
+  return path.join(getSystemsPath(projectId), `${systemId}.md`);
 }
 
 /**
- * Ensure systems directory exists for a project
+ * Read systems metadata from systems.json
  * @param projectId - Project UUID
+ * @returns Array of system document metadata (without content)
  */
-export async function ensureSystemsDirectoryExists(projectId: string): Promise<void> {
-  const systemsPath = getSystemsPath(projectId);
-  await fs.mkdir(systemsPath, { recursive: true });
-
-  // Create systems.json if it doesn't exist
-  const metadataPath = getMetadataPath(projectId);
+async function readSystemsJson(projectId: string): Promise<Omit<SystemDocument, 'content'>[]> {
   try {
-    await fs.access(metadataPath);
-  } catch {
-    await fs.writeFile(metadataPath, '[]', 'utf-8');
-  }
-}
-
-/**
- * Read system document metadata from systems.json
- * @param projectId - Project UUID
- * @returns Array of system document metadata
- */
-async function readMetadata(projectId: string): Promise<SystemDocumentMetadata[]> {
-  try {
-    const metadataPath = getMetadataPath(projectId);
-    const content = await fs.readFile(metadataPath, 'utf-8');
-    return JSON.parse(content) as SystemDocumentMetadata[];
+    const content = await fs.readFile(getSystemsJsonPath(projectId), 'utf-8');
+    return JSON.parse(content);
   } catch {
     return [];
   }
 }
 
 /**
- * Write system document metadata to systems.json
+ * Write systems metadata to systems.json
  * @param projectId - Project UUID
- * @param metadata - Array of system document metadata
+ * @param systems - Array of system document metadata
  */
-async function writeMetadata(projectId: string, metadata: SystemDocumentMetadata[]): Promise<void> {
-  const metadataPath = getMetadataPath(projectId);
-  await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+async function writeSystemsJson(projectId: string, systems: Omit<SystemDocument, 'content'>[]): Promise<void> {
+  await fs.writeFile(getSystemsJsonPath(projectId), JSON.stringify(systems, null, 2), 'utf-8');
 }
 
 /**
- * Read content from a .md file
+ * Read content from a system document's markdown file
  * @param projectId - Project UUID
- * @param documentId - System document UUID
- * @returns Content string, empty string if file doesn't exist
+ * @param systemId - System document UUID
+ * @returns Content string or empty string if file doesn't exist
  */
-async function readContent(projectId: string, documentId: string): Promise<string> {
+async function readSystemContent(projectId: string, systemId: string): Promise<string> {
   try {
-    const contentPath = getContentPath(projectId, documentId);
-    return await fs.readFile(contentPath, 'utf-8');
+    return await fs.readFile(getSystemContentPath(projectId, systemId), 'utf-8');
   } catch {
     return '';
   }
 }
 
 /**
- * Write content to a .md file
+ * Write content to a system document's markdown file
  * @param projectId - Project UUID
- * @param documentId - System document UUID
- * @param content - Content to write
+ * @param systemId - System document UUID
+ * @param content - Markdown content to write
  */
-async function writeContent(projectId: string, documentId: string, content: string): Promise<void> {
-  const contentPath = getContentPath(projectId, documentId);
-  await fs.writeFile(contentPath, content, 'utf-8');
+async function writeSystemContent(projectId: string, systemId: string, content: string): Promise<void> {
+  await fs.writeFile(getSystemContentPath(projectId, systemId), content, 'utf-8');
 }
 
 /**
- * Delete content .md file
+ * Delete a system document's markdown file
  * @param projectId - Project UUID
- * @param documentId - System document UUID
+ * @param systemId - System document UUID
  */
-async function deleteContent(projectId: string, documentId: string): Promise<void> {
+async function deleteSystemContent(projectId: string, systemId: string): Promise<void> {
   try {
-    const contentPath = getContentPath(projectId, documentId);
-    await fs.unlink(contentPath);
+    await fs.unlink(getSystemContentPath(projectId, systemId));
   } catch {
     // Ignore if file doesn't exist
   }
 }
 
 /**
- * Get all system documents for a project
+ * Get all system documents from a project
  * @param projectId - Project UUID
- * @returns Array of system documents with content
+ * @returns Array of system documents sorted by createdAt descending (newest first)
  */
 export async function getAllSystemDocuments(projectId: string): Promise<SystemDocument[]> {
-  const metadata = await readMetadata(projectId);
+  const systemsMetadata = await readSystemsJson(projectId);
 
-  const documents: SystemDocument[] = await Promise.all(
-    metadata.map(async (doc): Promise<SystemDocument> => {
-      const content = await readContent(projectId, doc.id);
-      return { ...doc, content };
-    })
+  // Load content for each system document
+  const systems: SystemDocument[] = await Promise.all(
+    systemsMetadata.map(async (metadata) => ({
+      ...metadata,
+      content: await readSystemContent(projectId, metadata.id),
+    }))
   );
 
-  return documents;
+  // Sort by createdAt descending (newest first)
+  return systems.sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 /**
  * Get a single system document by ID
  * @param projectId - Project UUID
- * @param documentId - System document UUID
- * @returns System document with content, or null if not found
+ * @param systemId - System document UUID
+ * @returns System document if found, null otherwise
  */
-export async function getSystemDocumentById(
-  projectId: string,
-  documentId: string
-): Promise<SystemDocument | null> {
-  const metadata = await readMetadata(projectId);
-  const doc = metadata.find(d => d.id === documentId);
+export async function getSystemDocumentById(projectId: string, systemId: string): Promise<SystemDocument | null> {
+  const systemsMetadata = await readSystemsJson(projectId);
+  const metadata = systemsMetadata.find(s => s.id === systemId);
 
-  if (!doc) {
+  if (!metadata) {
     return null;
   }
 
-  const content = await readContent(projectId, documentId);
-  return { ...doc, content };
+  return {
+    ...metadata,
+    content: await readSystemContent(projectId, systemId),
+  };
 }
 
 /**
- * Save a system document (create or update)
+ * Create a new system document
  * @param projectId - Project UUID
- * @param document - System document to save
+ * @param systemId - Generated UUID for the new system document
+ * @param data - System document creation data
+ * @returns Created system document
  */
-export async function saveSystemDocument(
+export async function createSystemDocument(
   projectId: string,
-  document: SystemDocument
-): Promise<void> {
-  await ensureSystemsDirectoryExists(projectId);
+  systemId: string,
+  data: CreateSystemDocumentDto
+): Promise<SystemDocument> {
+  const now = new Date().toISOString();
 
-  const metadata = await readMetadata(projectId);
+  const systemDocument: SystemDocument = {
+    id: systemId,
+    projectId,
+    name: data.name.trim(),
+    category: data.category.trim(),
+    tags: data.tags ?? [],
+    content: data.content ?? '',
+    dependencies: data.dependencies ?? [],
+    createdAt: now,
+    updatedAt: now,
+  };
 
-  // Separate content from metadata
-  const { content, ...docMetadata } = document;
-
-  // Check if document exists (update) or is new (create)
-  const existingIndex = metadata.findIndex(d => d.id === document.id);
-
-  if (existingIndex >= 0) {
-    // Update existing document
-    metadata[existingIndex] = docMetadata;
-  } else {
-    // Add new document
-    metadata.push(docMetadata);
-  }
+  // Read existing systems and add new one
+  const systems = await readSystemsJson(projectId);
+  const metadataToStore = {
+    id: systemDocument.id,
+    projectId: systemDocument.projectId,
+    name: systemDocument.name,
+    category: systemDocument.category,
+    tags: systemDocument.tags,
+    dependencies: systemDocument.dependencies,
+    createdAt: systemDocument.createdAt,
+    updatedAt: systemDocument.updatedAt,
+  };
+  systems.push(metadataToStore);
 
   // Write metadata and content
-  await writeMetadata(projectId, metadata);
-  await writeContent(projectId, document.id, content);
+  await writeSystemsJson(projectId, systems);
+  await writeSystemContent(projectId, systemId, systemDocument.content);
+
+  return systemDocument;
+}
+
+/**
+ * Update an existing system document
+ * @param projectId - Project UUID
+ * @param systemId - System document UUID
+ * @param data - System document update data
+ * @returns Updated system document
+ */
+export async function updateSystemDocument(
+  projectId: string,
+  systemId: string,
+  data: UpdateSystemDocumentDto
+): Promise<SystemDocument> {
+  const existing = await getSystemDocumentById(projectId, systemId);
+
+  if (!existing) {
+    throw new Error('System document not found');
+  }
+
+  const updated: SystemDocument = {
+    ...existing,
+    name: data.name !== undefined ? data.name.trim() : existing.name,
+    category: data.category !== undefined ? data.category.trim() : existing.category,
+    tags: data.tags ?? existing.tags,
+    content: data.content ?? existing.content,
+    dependencies: data.dependencies ?? existing.dependencies,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Update metadata in systems.json
+  const systems = await readSystemsJson(projectId);
+  const index = systems.findIndex(s => s.id === systemId);
+
+  if (index !== -1) {
+    systems[index] = {
+      id: updated.id,
+      projectId: updated.projectId,
+      name: updated.name,
+      category: updated.category,
+      tags: updated.tags,
+      dependencies: updated.dependencies,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
+    await writeSystemsJson(projectId, systems);
+  }
+
+  // Update content file
+  await writeSystemContent(projectId, systemId, updated.content);
+
+  return updated;
 }
 
 /**
  * Delete a system document
  * @param projectId - Project UUID
- * @param documentId - System document UUID
+ * @param systemId - System document UUID
  */
-export async function deleteSystemDocument(
-  projectId: string,
-  documentId: string
-): Promise<void> {
-  const metadata = await readMetadata(projectId);
-  const filteredMetadata = metadata.filter(d => d.id !== documentId);
+export async function deleteSystemDocument(projectId: string, systemId: string): Promise<void> {
+  // Remove from systems.json
+  const systems = await readSystemsJson(projectId);
+  const filteredSystems = systems.filter(s => s.id !== systemId);
+  await writeSystemsJson(projectId, filteredSystems);
 
-  await writeMetadata(projectId, filteredMetadata);
-  await deleteContent(projectId, documentId);
+  // Delete content file
+  await deleteSystemContent(projectId, systemId);
 }
 
 /**
- * Get all unique categories for a project
+ * Check if system document name already exists in a project
  * @param projectId - Project UUID
- * @returns Sorted array of unique category names
- */
-export async function getCategories(projectId: string): Promise<string[]> {
-  const metadata = await readMetadata(projectId);
-  const categories = new Set(metadata.map(d => d.category));
-  return Array.from(categories).sort();
-}
-
-/**
- * Get all unique tags for a project
- * @param projectId - Project UUID
- * @returns Sorted array of unique tag names
- */
-export async function getTags(projectId: string): Promise<string[]> {
-  const metadata = await readMetadata(projectId);
-  const tags = new Set(metadata.flatMap(d => d.tags));
-  return Array.from(tags).sort();
-}
-
-/**
- * Check if a system document name already exists in the project
- * @param projectId - Project UUID
- * @param name - Document name to check
+ * @param name - System document name to check
  * @param excludeId - Optional ID to exclude from check (for updates)
  * @returns true if duplicate exists
  */
-export async function isSystemNameDuplicate(
-  projectId: string,
-  name: string,
-  excludeId?: string
-): Promise<boolean> {
-  const metadata = await readMetadata(projectId);
-  return metadata.some(d => d.name === name && d.id !== excludeId);
+export async function isSystemNameDuplicate(projectId: string, name: string, excludeId?: string): Promise<boolean> {
+  const systems = await readSystemsJson(projectId);
+  return systems.some(s => s.name === name && s.id !== excludeId);
 }
 
 /**
- * Search system documents by query
- * Searches in name, category, and tags (case insensitive)
+ * Get all unique categories from system documents in a project
  * @param projectId - Project UUID
- * @param query - Search query
- * @returns Array of matching system documents with content
+ * @returns Array of unique categories sorted alphabetically
  */
-export async function searchSystemDocuments(
-  projectId: string,
-  query: string
-): Promise<SystemDocument[]> {
-  const documents = await getAllSystemDocuments(projectId);
-
-  if (!query.trim()) {
-    return documents;
-  }
-
-  const lowerQuery = query.toLowerCase();
-
-  return documents.filter(doc => {
-    const matchesName = doc.name.toLowerCase().includes(lowerQuery);
-    const matchesCategory = doc.category.toLowerCase().includes(lowerQuery);
-    const matchesTags = doc.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
-
-    return matchesName || matchesCategory || matchesTags;
-  });
+export async function getUniqueCategories(projectId: string): Promise<string[]> {
+  const systems = await readSystemsJson(projectId);
+  const categories = [...new Set(systems.map(s => s.category))];
+  return categories.sort();
 }
 
 /**
- * Get documents that depend on a specific document
+ * Get all unique tags from system documents in a project
  * @param projectId - Project UUID
- * @param documentId - Document ID to check dependencies for
- * @returns Array of documents that depend on the specified document
+ * @returns Array of unique tags sorted alphabetically
  */
-export async function getDependentDocuments(
-  projectId: string,
-  documentId: string
-): Promise<SystemDocument[]> {
-  const documents = await getAllSystemDocuments(projectId);
-  return documents.filter(doc => doc.dependencies.includes(documentId));
+export async function getUniqueTags(projectId: string): Promise<string[]> {
+  const systems = await readSystemsJson(projectId);
+  const allTags = systems.flatMap(s => s.tags);
+  const uniqueTags = [...new Set(allTags)];
+  return uniqueTags.sort();
 }

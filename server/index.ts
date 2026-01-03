@@ -24,7 +24,7 @@ export function createApp(): Express {
   app.use('/api/projects/:projectId/systems', systemsRouter);
   app.use('/api/tasks', tasksRouter);
 
-  // Project-scoped task routes
+  // Project-scoped routes
   app.get('/api/projects/:projectId/tasks', getProjectTasks);
   app.post('/api/projects/:projectId/tasks', createProjectTask);
 
