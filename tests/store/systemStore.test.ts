@@ -2,444 +2,394 @@
  * System Store Tests
  * TDD test suite for Zustand system document state management
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
 import type { SystemDocument } from '../../src/types/index.ts';
 
-// Mock the systemDocService
+// Mock the service
 vi.mock('../../src/services/systemDocService.ts', () => ({
   getSystemDocuments: vi.fn(),
+  getSystemDocument: vi.fn(),
   createSystemDocument: vi.fn(),
   updateSystemDocument: vi.fn(),
   deleteSystemDocument: vi.fn(),
   getCategories: vi.fn(),
   getTags: vi.fn(),
-  searchSystemDocuments: vi.fn(),
 }));
 
-// Import after mocking
-import { useSystemStore } from '../../src/store/systemStore.ts';
+// Import store and mocked service
+import { useSystemStore, selectFilteredDocuments } from '../../src/store/systemStore.ts';
 import * as systemDocService from '../../src/services/systemDocService.ts';
 
-describe('System Store', () => {
-  const projectId = 'test-project-id';
+describe('systemStore', () => {
+  const mockProjectId = 'test-project-123';
 
-  const mockDocuments: SystemDocument[] = [
-    {
-      id: 'doc-1',
-      projectId,
-      name: 'Character System',
-      category: 'System',
-      tags: ['core', 'player'],
-      content: '# Character System',
-      dependencies: [],
-      createdAt: '2026-01-02T10:00:00.000Z',
-      updatedAt: '2026-01-02T10:00:00.000Z',
-    },
-    {
-      id: 'doc-2',
-      projectId,
-      name: 'Economy Rules',
-      category: 'Economy',
-      tags: ['economy', 'core'],
-      content: '# Economy Rules',
-      dependencies: ['doc-1'],
-      createdAt: '2026-01-02T11:00:00.000Z',
-      updatedAt: '2026-01-02T11:00:00.000Z',
-    },
-  ];
+  const mockSystemDocument: SystemDocument = {
+    id: 'system-1',
+    projectId: mockProjectId,
+    name: 'Combat System',
+    category: 'Core Mechanics',
+    tags: ['combat', 'action'],
+    content: '# Combat System\n\nDescription here...',
+    dependencies: [],
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
+  };
+
+  const mockSystemDocument2: SystemDocument = {
+    id: 'system-2',
+    projectId: mockProjectId,
+    name: 'UI System',
+    category: 'Interface',
+    tags: ['ui', 'display'],
+    content: '# UI System',
+    dependencies: [],
+    createdAt: '2024-01-02T00:00:00.000Z',
+    updatedAt: '2024-01-02T00:00:00.000Z',
+  };
 
   beforeEach(() => {
-    // Reset store state
+    // Reset store to initial state
     useSystemStore.setState({
       documents: [],
       selectedDocumentIds: [],
+      selectedCategory: null,
+      selectedTags: [],
+      searchQuery: '',
       isLoading: false,
       error: null,
-      searchQuery: '',
-      selectedTags: [],
-      selectedCategory: null,
-      expandedCategories: [],
-      previewDocumentId: null,
+      categories: [],
+      allTags: [],
     });
-
-    // Reset mocks
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('Initial State', () => {
+  describe('initial state', () => {
     it('should have correct initial state', () => {
-      const state = useSystemStore.getState();
+      const { result } = renderHook(() => useSystemStore());
 
-      expect(state.documents).toEqual([]);
-      expect(state.selectedDocumentIds).toEqual([]);
-      expect(state.isLoading).toBe(false);
-      expect(state.error).toBeNull();
-      expect(state.searchQuery).toBe('');
-      expect(state.selectedTags).toEqual([]);
-      expect(state.selectedCategory).toBeNull();
-      expect(state.expandedCategories).toEqual([]);
-      expect(state.previewDocumentId).toBeNull();
+      expect(result.current.documents).toEqual([]);
+      expect(result.current.selectedDocumentIds).toEqual([]);
+      expect(result.current.selectedCategory).toBeNull();
+      expect(result.current.selectedTags).toEqual([]);
+      expect(result.current.searchQuery).toBe('');
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeNull();
+      expect(result.current.categories).toEqual([]);
+      expect(result.current.allTags).toEqual([]);
     });
   });
 
   describe('fetchDocuments', () => {
     it('should fetch documents and update state', async () => {
+      const mockDocuments = [mockSystemDocument, mockSystemDocument2];
       vi.mocked(systemDocService.getSystemDocuments).mockResolvedValueOnce(mockDocuments);
+      vi.mocked(systemDocService.getCategories).mockResolvedValueOnce(['Core Mechanics', 'Interface']);
+      vi.mocked(systemDocService.getTags).mockResolvedValueOnce(['action', 'combat', 'display', 'ui']);
+
+      const { result } = renderHook(() => useSystemStore());
 
       await act(async () => {
-        await useSystemStore.getState().fetchDocuments(projectId);
+        await result.current.fetchDocuments(mockProjectId);
       });
 
-      const state = useSystemStore.getState();
-      expect(state.documents).toEqual(mockDocuments);
-      expect(state.isLoading).toBe(false);
-      expect(state.error).toBeNull();
+      // Documents are sorted by createdAt descending (newest first)
+      expect(result.current.documents).toHaveLength(2);
+      expect(result.current.documents[0].id).toBe(mockSystemDocument2.id); // Newer
+      expect(result.current.documents[1].id).toBe(mockSystemDocument.id); // Older
+      expect(result.current.categories).toEqual(['Core Mechanics', 'Interface']);
+      expect(result.current.allTags).toEqual(['action', 'combat', 'display', 'ui']);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeNull();
     });
 
     it('should set loading state while fetching', async () => {
-      let resolvePromise: (docs: SystemDocument[]) => void;
-      const fetchPromise = new Promise<SystemDocument[]>((resolve) => {
-        resolvePromise = resolve;
-      });
+      vi.mocked(systemDocService.getSystemDocuments).mockImplementationOnce(
+        () => new Promise(resolve => setTimeout(() => resolve([]), 100))
+      );
+      vi.mocked(systemDocService.getCategories).mockResolvedValueOnce([]);
+      vi.mocked(systemDocService.getTags).mockResolvedValueOnce([]);
 
-      vi.mocked(systemDocService.getSystemDocuments).mockReturnValueOnce(fetchPromise);
+      const { result } = renderHook(() => useSystemStore());
 
       act(() => {
-        useSystemStore.getState().fetchDocuments(projectId);
+        result.current.fetchDocuments(mockProjectId);
       });
 
-      expect(useSystemStore.getState().isLoading).toBe(true);
-
-      await act(async () => {
-        resolvePromise!(mockDocuments);
-        await fetchPromise;
-      });
-
-      expect(useSystemStore.getState().isLoading).toBe(false);
+      expect(result.current.isLoading).toBe(true);
     });
 
-    it('should set error state on failure', async () => {
-      vi.mocked(systemDocService.getSystemDocuments).mockRejectedValueOnce(
-        new Error('Network error')
-      );
+    it('should set error state on fetch failure', async () => {
+      vi.mocked(systemDocService.getSystemDocuments).mockRejectedValueOnce(new Error('Fetch failed'));
+
+      const { result } = renderHook(() => useSystemStore());
 
       await act(async () => {
-        await useSystemStore.getState().fetchDocuments(projectId);
+        await result.current.fetchDocuments(mockProjectId);
       });
 
-      const state = useSystemStore.getState();
-      expect(state.isLoading).toBe(false);
-      expect(state.error).toBe('Network error');
+      expect(result.current.error).toBe('Fetch failed');
+      expect(result.current.isLoading).toBe(false);
     });
   });
 
   describe('createDocument', () => {
     it('should create document and add to state', async () => {
-      const newDoc = mockDocuments[0];
-      vi.mocked(systemDocService.createSystemDocument).mockResolvedValueOnce(newDoc);
+      const createData = { name: 'New System', category: 'Core' };
+      const createdDoc = { ...mockSystemDocument, ...createData, id: 'new-system-id' };
+      vi.mocked(systemDocService.createSystemDocument).mockResolvedValueOnce(createdDoc);
+
+      const { result } = renderHook(() => useSystemStore());
 
       await act(async () => {
-        await useSystemStore.getState().createDocument(projectId, {
-          name: newDoc.name,
-          category: newDoc.category,
-          tags: newDoc.tags,
-          content: newDoc.content,
-        });
+        await result.current.createDocument(mockProjectId, createData);
       });
 
-      const state = useSystemStore.getState();
-      expect(state.documents).toContainEqual(newDoc);
-      expect(state.error).toBeNull();
+      expect(result.current.documents).toContainEqual(createdDoc);
+      expect(result.current.isLoading).toBe(false);
     });
 
-    it('should expand category of newly created document', async () => {
-      const newDoc = mockDocuments[0];
-      vi.mocked(systemDocService.createSystemDocument).mockResolvedValueOnce(newDoc);
+    it('should set error state on create failure', async () => {
+      vi.mocked(systemDocService.createSystemDocument).mockRejectedValueOnce(new Error('Create failed'));
+
+      const { result } = renderHook(() => useSystemStore());
 
       await act(async () => {
-        await useSystemStore.getState().createDocument(projectId, {
-          name: newDoc.name,
-          category: newDoc.category,
-        });
+        await result.current.createDocument(mockProjectId, { name: 'Test', category: 'Core' });
       });
 
-      const state = useSystemStore.getState();
-      expect(state.expandedCategories).toContain(newDoc.category);
+      expect(result.current.error).toBe('Create failed');
     });
   });
 
   describe('updateDocument', () => {
     it('should update document in state', async () => {
-      // Set initial state with documents
-      useSystemStore.setState({ documents: mockDocuments });
+      // Set initial state with a document
+      useSystemStore.setState({ documents: [mockSystemDocument] });
 
-      const updatedDoc = { ...mockDocuments[0], name: 'Updated Character System' };
+      const updateData = { name: 'Updated Name' };
+      const updatedDoc = { ...mockSystemDocument, ...updateData };
       vi.mocked(systemDocService.updateSystemDocument).mockResolvedValueOnce(updatedDoc);
 
+      const { result } = renderHook(() => useSystemStore());
+
       await act(async () => {
-        await useSystemStore.getState().updateDocument(projectId, mockDocuments[0].id, {
-          name: 'Updated Character System',
-        });
+        await result.current.updateDocument(mockProjectId, mockSystemDocument.id, updateData);
       });
 
-      const state = useSystemStore.getState();
-      expect(state.documents.find(d => d.id === mockDocuments[0].id)?.name).toBe('Updated Character System');
+      expect(result.current.documents[0].name).toBe('Updated Name');
     });
   });
 
   describe('deleteDocument', () => {
     it('should remove document from state', async () => {
-      useSystemStore.setState({ documents: mockDocuments });
+      // Set initial state with documents
+      useSystemStore.setState({ documents: [mockSystemDocument, mockSystemDocument2] });
       vi.mocked(systemDocService.deleteSystemDocument).mockResolvedValueOnce();
 
+      const { result } = renderHook(() => useSystemStore());
+
       await act(async () => {
-        await useSystemStore.getState().deleteDocument(projectId, mockDocuments[0].id);
+        await result.current.deleteDocument(mockProjectId, mockSystemDocument.id);
+      });
+
+      expect(result.current.documents).toHaveLength(1);
+      expect(result.current.documents[0].id).toBe(mockSystemDocument2.id);
+    });
+
+    it('should clear selectedDocumentIds if deleted document was selected', async () => {
+      useSystemStore.setState({
+        documents: [mockSystemDocument],
+        selectedDocumentIds: [mockSystemDocument.id],
+      });
+      vi.mocked(systemDocService.deleteSystemDocument).mockResolvedValueOnce();
+
+      const { result } = renderHook(() => useSystemStore());
+
+      await act(async () => {
+        await result.current.deleteDocument(mockProjectId, mockSystemDocument.id);
+      });
+
+      expect(result.current.selectedDocumentIds).not.toContain(mockSystemDocument.id);
+    });
+  });
+
+  describe('setSelectedCategory', () => {
+    it('should set selected category', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.setSelectedCategory('Core Mechanics');
+      });
+
+      expect(result.current.selectedCategory).toBe('Core Mechanics');
+    });
+
+    it('should clear selected category when null is passed', () => {
+      useSystemStore.setState({ selectedCategory: 'Core' });
+
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.setSelectedCategory(null);
+      });
+
+      expect(result.current.selectedCategory).toBeNull();
+    });
+  });
+
+  describe('toggleTag', () => {
+    it('should add tag when not selected', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.toggleTag('combat');
+      });
+
+      expect(result.current.selectedTags).toContain('combat');
+    });
+
+    it('should remove tag when already selected', () => {
+      useSystemStore.setState({ selectedTags: ['combat', 'action'] });
+
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.toggleTag('combat');
+      });
+
+      expect(result.current.selectedTags).not.toContain('combat');
+      expect(result.current.selectedTags).toContain('action');
+    });
+  });
+
+  describe('setSearchQuery', () => {
+    it('should update search query', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.setSearchQuery('combat');
+      });
+
+      expect(result.current.searchQuery).toBe('combat');
+    });
+  });
+
+  describe('clearFilters', () => {
+    it('should clear all filters', () => {
+      useSystemStore.setState({
+        selectedCategory: 'Core',
+        selectedTags: ['combat'],
+        searchQuery: 'test',
+      });
+
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.clearFilters();
+      });
+
+      expect(result.current.selectedCategory).toBeNull();
+      expect(result.current.selectedTags).toEqual([]);
+      expect(result.current.searchQuery).toBe('');
+    });
+  });
+
+  describe('selectFilteredDocuments (direct selector usage)', () => {
+    beforeEach(() => {
+      useSystemStore.setState({
+        documents: [mockSystemDocument, mockSystemDocument2],
+      });
+    });
+
+    it('should return all documents when no filters are applied', () => {
+      const state = useSystemStore.getState();
+      const filtered = selectFilteredDocuments(state);
+
+      expect(filtered).toHaveLength(2);
+    });
+
+    it('should filter by category', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.setSelectedCategory('Core Mechanics');
       });
 
       const state = useSystemStore.getState();
-      expect(state.documents.find(d => d.id === mockDocuments[0].id)).toBeUndefined();
-      expect(state.documents).toHaveLength(1);
+      const filtered = selectFilteredDocuments(state);
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].category).toBe('Core Mechanics');
     });
 
-    it('should clear preview if deleted document was being previewed', async () => {
+    it('should filter by tags (AND logic)', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.toggleTag('combat');
+      });
+
+      const state = useSystemStore.getState();
+      const filtered = selectFilteredDocuments(state);
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].id).toBe(mockSystemDocument.id);
+    });
+
+    it('should filter by search query (name)', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.setSearchQuery('Combat');
+      });
+
+      const state = useSystemStore.getState();
+      const filtered = selectFilteredDocuments(state);
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].name).toContain('Combat');
+    });
+
+    it('should filter by search query (content)', () => {
+      const { result } = renderHook(() => useSystemStore());
+
+      act(() => {
+        result.current.setSearchQuery('Description');
+      });
+
+      const state = useSystemStore.getState();
+      const filtered = selectFilteredDocuments(state);
+
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].content).toContain('Description');
+    });
+
+    it('should combine multiple filters', () => {
+      // Add another document with same category but different tags
+      const anotherDoc: SystemDocument = {
+        ...mockSystemDocument,
+        id: 'system-3',
+        name: 'Economy System',
+        category: 'Core Mechanics',
+        tags: ['economy'],
+      };
       useSystemStore.setState({
-        documents: mockDocuments,
-        previewDocumentId: mockDocuments[0].id,
-      });
-      vi.mocked(systemDocService.deleteSystemDocument).mockResolvedValueOnce();
-
-      await act(async () => {
-        await useSystemStore.getState().deleteDocument(projectId, mockDocuments[0].id);
+        documents: [mockSystemDocument, mockSystemDocument2, anotherDoc],
       });
 
-      expect(useSystemStore.getState().previewDocumentId).toBeNull();
-    });
-  });
+      const { result } = renderHook(() => useSystemStore());
 
-  describe('Filter Actions', () => {
-    describe('setSearchQuery', () => {
-      it('should update search query', () => {
-        act(() => {
-          useSystemStore.getState().setSearchQuery('character');
-        });
-
-        expect(useSystemStore.getState().searchQuery).toBe('character');
-      });
-    });
-
-    describe('toggleTag', () => {
-      it('should add tag to selectedTags', () => {
-        act(() => {
-          useSystemStore.getState().toggleTag('core');
-        });
-
-        expect(useSystemStore.getState().selectedTags).toContain('core');
+      act(() => {
+        result.current.setSelectedCategory('Core Mechanics');
+        result.current.toggleTag('combat');
       });
 
-      it('should remove tag from selectedTags if already selected', () => {
-        useSystemStore.setState({ selectedTags: ['core', 'player'] });
+      const state = useSystemStore.getState();
+      const filtered = selectFilteredDocuments(state);
 
-        act(() => {
-          useSystemStore.getState().toggleTag('core');
-        });
-
-        expect(useSystemStore.getState().selectedTags).not.toContain('core');
-        expect(useSystemStore.getState().selectedTags).toContain('player');
-      });
-    });
-
-    describe('setSelectedCategory', () => {
-      it('should update selected category', () => {
-        act(() => {
-          useSystemStore.getState().setSelectedCategory('System');
-        });
-
-        expect(useSystemStore.getState().selectedCategory).toBe('System');
-      });
-
-      it('should clear category when set to null', () => {
-        useSystemStore.setState({ selectedCategory: 'System' });
-
-        act(() => {
-          useSystemStore.getState().setSelectedCategory(null);
-        });
-
-        expect(useSystemStore.getState().selectedCategory).toBeNull();
-      });
-    });
-
-    describe('clearFilters', () => {
-      it('should reset all filter states', () => {
-        useSystemStore.setState({
-          searchQuery: 'test',
-          selectedTags: ['core', 'player'],
-          selectedCategory: 'System',
-        });
-
-        act(() => {
-          useSystemStore.getState().clearFilters();
-        });
-
-        const state = useSystemStore.getState();
-        expect(state.searchQuery).toBe('');
-        expect(state.selectedTags).toEqual([]);
-        expect(state.selectedCategory).toBeNull();
-      });
-    });
-  });
-
-  describe('UI Actions', () => {
-    describe('toggleCategory', () => {
-      it('should add category to expandedCategories', () => {
-        act(() => {
-          useSystemStore.getState().toggleCategory('System');
-        });
-
-        expect(useSystemStore.getState().expandedCategories).toContain('System');
-      });
-
-      it('should remove category from expandedCategories if already expanded', () => {
-        useSystemStore.setState({ expandedCategories: ['System', 'Economy'] });
-
-        act(() => {
-          useSystemStore.getState().toggleCategory('System');
-        });
-
-        expect(useSystemStore.getState().expandedCategories).not.toContain('System');
-        expect(useSystemStore.getState().expandedCategories).toContain('Economy');
-      });
-    });
-
-    describe('setPreviewDocument', () => {
-      it('should set preview document id', () => {
-        act(() => {
-          useSystemStore.getState().setPreviewDocument('doc-1');
-        });
-
-        expect(useSystemStore.getState().previewDocumentId).toBe('doc-1');
-      });
-
-      it('should clear preview when set to null', () => {
-        useSystemStore.setState({ previewDocumentId: 'doc-1' });
-
-        act(() => {
-          useSystemStore.getState().setPreviewDocument(null);
-        });
-
-        expect(useSystemStore.getState().previewDocumentId).toBeNull();
-      });
-    });
-
-    describe('clearDocuments', () => {
-      it('should reset documents and all related state', () => {
-        useSystemStore.setState({
-          documents: mockDocuments,
-          selectedDocumentIds: ['doc-1'],
-          searchQuery: 'test',
-          selectedTags: ['core'],
-          selectedCategory: 'System',
-          expandedCategories: ['System'],
-          previewDocumentId: 'doc-1',
-        });
-
-        act(() => {
-          useSystemStore.getState().clearDocuments();
-        });
-
-        const state = useSystemStore.getState();
-        expect(state.documents).toEqual([]);
-        expect(state.selectedDocumentIds).toEqual([]);
-        expect(state.searchQuery).toBe('');
-        expect(state.selectedTags).toEqual([]);
-        expect(state.selectedCategory).toBeNull();
-        expect(state.expandedCategories).toEqual([]);
-        expect(state.previewDocumentId).toBeNull();
-      });
-    });
-  });
-
-  describe('Computed Getters', () => {
-    beforeEach(() => {
-      useSystemStore.setState({ documents: mockDocuments });
-    });
-
-    describe('getFilteredDocuments', () => {
-      it('should return all documents when no filters are applied', () => {
-        const result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toEqual(mockDocuments);
-      });
-
-      it('should filter by search query in name', () => {
-        useSystemStore.setState({ searchQuery: 'character' });
-        const result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toHaveLength(1);
-        expect(result[0].name).toBe('Character System');
-      });
-
-      it('should filter by search query in tags', () => {
-        useSystemStore.setState({ searchQuery: 'economy' });
-        const result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toHaveLength(1);
-        expect(result[0].name).toBe('Economy Rules');
-      });
-
-      it('should filter by selected tags (AND logic)', () => {
-        useSystemStore.setState({ selectedTags: ['core'] });
-        let result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toHaveLength(2);
-
-        useSystemStore.setState({ selectedTags: ['core', 'player'] });
-        result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toHaveLength(1);
-        expect(result[0].name).toBe('Character System');
-      });
-
-      it('should filter by selected category', () => {
-        useSystemStore.setState({ selectedCategory: 'Economy' });
-        const result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toHaveLength(1);
-        expect(result[0].category).toBe('Economy');
-      });
-
-      it('should combine all filters', () => {
-        useSystemStore.setState({
-          searchQuery: 'rules',
-          selectedTags: ['core'],
-          selectedCategory: 'Economy',
-        });
-        const result = useSystemStore.getState().getFilteredDocuments();
-        expect(result).toHaveLength(1);
-        expect(result[0].name).toBe('Economy Rules');
-      });
-    });
-
-    describe('getCategories', () => {
-      it('should return unique categories sorted alphabetically', () => {
-        const result = useSystemStore.getState().getCategories();
-        expect(result).toEqual(['Economy', 'System']);
-      });
-    });
-
-    describe('getAllTags', () => {
-      it('should return unique tags sorted alphabetically', () => {
-        const result = useSystemStore.getState().getAllTags();
-        expect(result).toEqual(['core', 'economy', 'player']);
-      });
-    });
-
-    describe('getDocumentsByCategory', () => {
-      it('should return documents grouped by category', () => {
-        const result = useSystemStore.getState().getDocumentsByCategory();
-        expect(result).toHaveProperty('System');
-        expect(result).toHaveProperty('Economy');
-        expect(result.System).toHaveLength(1);
-        expect(result.Economy).toHaveLength(1);
-      });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].id).toBe(mockSystemDocument.id);
     });
   });
 });

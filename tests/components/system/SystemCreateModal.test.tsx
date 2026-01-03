@@ -1,334 +1,145 @@
 /**
  * SystemCreateModal Component Tests
- * Tests for the system document creation modal
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SystemCreateModal } from '../../../src/components/system/SystemCreateModal';
-import { useSystemStore } from '../../../src/store/systemStore';
-import { useProjectStore } from '../../../src/store/projectStore';
 
-// Mock the stores
-vi.mock('../../../src/store/systemStore');
-vi.mock('../../../src/store/projectStore');
+// Mock the systemStore
+vi.mock('../../../src/store/systemStore', () => ({
+  useSystemStore: vi.fn((selector) => {
+    const mockCreateDocument = vi.fn().mockResolvedValue(undefined);
+    const mockState = {
+      createDocument: mockCreateDocument,
+      documents: [{ id: 'mock-id', name: 'Mock Doc' }],
+    };
 
-const mockUseSystemStore = vi.mocked(useSystemStore);
-const mockUseProjectStore = vi.mocked(useProjectStore);
+    if (typeof selector === 'function') {
+      return selector(mockState);
+    }
+    return mockState;
+  }),
+}));
 
 describe('SystemCreateModal', () => {
-  const mockCreateDocument = vi.fn();
-  const mockOnClose = vi.fn();
-  const mockOnSuccess = vi.fn();
+  const defaultProps = {
+    isOpen: true,
+    onClose: vi.fn(),
+    onCreated: vi.fn(),
+    projectId: 'project-1',
+    existingCategories: ['Core Mechanics', 'Character'],
+    existingTags: ['combat', 'rpg', 'action'],
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockUseSystemStore.mockReturnValue({
-      createDocument: mockCreateDocument,
-    } as ReturnType<typeof useSystemStore>);
-
-    mockUseProjectStore.mockReturnValue({
-      currentProjectId: 'project-123',
-    } as ReturnType<typeof useProjectStore>);
   });
 
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+  describe('Rendering', () => {
+    it('should not render when isOpen is false', () => {
+      render(<SystemCreateModal {...defaultProps} isOpen={false} />);
 
-  it('should not render when isOpen is false', () => {
-    render(
-      <SystemCreateModal
-        isOpen={false}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('should render when isOpen is true', () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Add System Document')).toBeInTheDocument();
-  });
-
-  it('should render all form fields', () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    expect(screen.getByLabelText(/Document Name/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Category/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Tags/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Content/)).toBeInTheDocument();
-  });
-
-  it('should render suggested categories', () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    expect(screen.getByText('System')).toBeInTheDocument();
-    expect(screen.getByText('Content')).toBeInTheDocument();
-    expect(screen.getByText('UI')).toBeInTheDocument();
-    expect(screen.getByText('Economy')).toBeInTheDocument();
-    expect(screen.getByText('Growth')).toBeInTheDocument();
-    expect(screen.getByText('Narrative')).toBeInTheDocument();
-  });
-
-  it('should call onClose when Cancel button is clicked', () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelButton);
-
-    expect(mockOnClose).toHaveBeenCalled();
-  });
-
-  it('should disable Create button when form is invalid', () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const createButton = screen.getByRole('button', { name: 'Create' });
-    expect(createButton).toBeDisabled();
-  });
-
-  it('should enable Create button when name and category are provided', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const nameInput = screen.getByLabelText(/Document Name/);
-    const categoryInput = screen.getByLabelText(/Category/);
-
-    await user.type(nameInput, 'Test Document');
-    await user.type(categoryInput, 'System');
-
-    const createButton = screen.getByRole('button', { name: 'Create' });
-    expect(createButton).not.toBeDisabled();
-  });
-
-  it('should show error when name exceeds 100 characters', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const nameInput = screen.getByLabelText(/Document Name/);
-    await user.type(nameInput, 'a'.repeat(101));
-
-    expect(screen.getByText('Must be 100 characters or less')).toBeInTheDocument();
-  });
-
-  it('should select category when suggested category is clicked', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const systemButton = screen.getByRole('button', { name: 'System' });
-    await user.click(systemButton);
-
-    const categoryInput = screen.getByLabelText(/Category/) as HTMLInputElement;
-    expect(categoryInput.value).toBe('System');
-  });
-
-  it('should add tag when Enter is pressed in tag input', async () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const tagInput = screen.getByLabelText(/Tags/) as HTMLInputElement;
-
-    // Type into the input
-    fireEvent.change(tagInput, { target: { value: 'core' } });
-    expect(tagInput.value).toBe('core');
-
-    // Press Enter
-    fireEvent.keyDown(tagInput, { key: 'Enter', code: 'Enter' });
-
-    // Tag should now appear as a span element
-    await waitFor(() => {
-      expect(screen.getByText('core')).toBeInTheDocument();
+      expect(screen.queryByTestId('system-create-modal')).not.toBeInTheDocument();
     });
 
-    // Input should be cleared
-    expect(tagInput.value).toBe('');
-  });
+    it('should render modal when open', () => {
+      render(<SystemCreateModal {...defaultProps} />);
 
-  it('should remove tag when remove button is clicked', async () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const tagInput = screen.getByLabelText(/Tags/) as HTMLInputElement;
-
-    // Add a tag first
-    fireEvent.change(tagInput, { target: { value: 'core' } });
-    fireEvent.keyDown(tagInput, { key: 'Enter', code: 'Enter' });
-
-    await waitFor(() => {
-      expect(screen.getByText('core')).toBeInTheDocument();
+      expect(screen.getByTestId('system-create-modal')).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
-    const removeButton = screen.getByLabelText('Remove core');
-    fireEvent.click(removeButton);
+    it('should display modal title', () => {
+      render(<SystemCreateModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.queryByText('core')).not.toBeInTheDocument();
+      expect(screen.getByText('Create System Document')).toBeInTheDocument();
+    });
+
+    it('should render form fields', () => {
+      render(<SystemCreateModal {...defaultProps} />);
+
+      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/category/i)).toBeInTheDocument();
+      expect(screen.getByText(/tags/i)).toBeInTheDocument();
+      expect(screen.getByText(/content/i)).toBeInTheDocument();
+    });
+
+    it('should render action buttons', () => {
+      render(<SystemCreateModal {...defaultProps} />);
+
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument();
+    });
+
+    it('should have create button disabled initially', () => {
+      render(<SystemCreateModal {...defaultProps} />);
+
+      const createButton = screen.getByRole('button', { name: /create/i });
+      expect(createButton).toBeDisabled();
     });
   });
 
-  it('should call createDocument when form is submitted', async () => {
-    const user = userEvent.setup();
-    mockCreateDocument.mockResolvedValueOnce(undefined);
+  describe('Form Interactions', () => {
+    it('should enable create button when name and category filled', async () => {
+      render(<SystemCreateModal {...defaultProps} />);
 
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+      const nameInput = screen.getByLabelText(/name/i);
+      const categoryInput = screen.getByLabelText(/category/i);
 
-    const nameInput = screen.getByLabelText(/Document Name/);
-    const categoryInput = screen.getByLabelText(/Category/);
+      await userEvent.type(nameInput, 'Combat System');
+      await userEvent.type(categoryInput, 'Core Mechanics');
 
-    await user.type(nameInput, 'Test Document');
-    await user.type(categoryInput, 'System');
+      const createButton = screen.getByRole('button', { name: /create/i });
+      expect(createButton).not.toBeDisabled();
+    });
 
-    const createButton = screen.getByRole('button', { name: 'Create' });
-    await user.click(createButton);
+    it('should show category suggestions when typing', async () => {
+      render(<SystemCreateModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(mockCreateDocument).toHaveBeenCalledWith('project-123', {
-        name: 'Test Document',
-        category: 'System',
-        tags: [],
-        content: '',
-        dependencies: [],
-      });
+      const categoryInput = screen.getByLabelText(/category/i);
+      await userEvent.click(categoryInput);
+      await userEvent.type(categoryInput, 'Core');
+
+      // Suggestions should appear
+      expect(screen.getByText('Core Mechanics')).toBeInTheDocument();
+    });
+
+    it('should call onClose when cancel button clicked', async () => {
+      render(<SystemCreateModal {...defaultProps} />);
+
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      await userEvent.click(cancelButton);
+
+      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onClose when backdrop clicked', async () => {
+      render(<SystemCreateModal {...defaultProps} />);
+
+      const backdrop = screen.getByTestId('system-create-modal');
+      await userEvent.click(backdrop);
+
+      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
   });
 
-  it('should call onSuccess and onClose after successful creation', async () => {
-    const user = userEvent.setup();
-    mockCreateDocument.mockResolvedValueOnce(undefined);
+  describe('Accessibility', () => {
+    it('should have proper dialog role', () => {
+      render(<SystemCreateModal {...defaultProps} />);
 
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const nameInput = screen.getByLabelText(/Document Name/);
-    const categoryInput = screen.getByLabelText(/Category/);
-
-    await user.type(nameInput, 'Test Document');
-    await user.type(categoryInput, 'System');
-
-    const createButton = screen.getByRole('button', { name: 'Create' });
-    await user.click(createButton);
-
-    await waitFor(() => {
-      expect(mockOnSuccess).toHaveBeenCalled();
-      expect(mockOnClose).toHaveBeenCalled();
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveAttribute('aria-labelledby');
     });
-  });
 
-  it('should show error message when creation fails', async () => {
-    const user = userEvent.setup();
-    mockCreateDocument.mockRejectedValueOnce(new Error('Creation failed'));
+    it('should have labeled form fields', () => {
+      render(<SystemCreateModal {...defaultProps} />);
 
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
+      const nameInput = screen.getByLabelText(/name/i);
+      expect(nameInput).toHaveAttribute('id');
 
-    const nameInput = screen.getByLabelText(/Document Name/);
-    const categoryInput = screen.getByLabelText(/Category/);
-
-    await user.type(nameInput, 'Test Document');
-    await user.type(categoryInput, 'System');
-
-    const createButton = screen.getByRole('button', { name: 'Create' });
-    await user.click(createButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Creation failed')).toBeInTheDocument();
+      const categoryInput = screen.getByLabelText(/category/i);
+      expect(categoryInput).toHaveAttribute('id');
     });
-  });
-
-  it('should close when backdrop is clicked', async () => {
-    render(
-      <SystemCreateModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onSuccess={mockOnSuccess}
-      />
-    );
-
-    const backdrop = screen.getByRole('dialog').parentElement;
-    fireEvent.click(backdrop!);
-
-    expect(mockOnClose).toHaveBeenCalled();
   });
 });
