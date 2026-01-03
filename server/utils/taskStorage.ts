@@ -4,7 +4,8 @@
  */
 import fs from 'fs/promises';
 import path from 'path';
-import type { Task, TaskStatus } from '../../src/types/index.ts';
+import type { Task, TaskStatus, CreateTaskDto } from '../../src/types/index.ts';
+import { v4 as uuidv4 } from 'uuid';
 import { WORKSPACE_PATH } from './projectStorage.ts';
 
 /**
@@ -107,6 +108,61 @@ export async function updateTask(taskId: string, updates: Partial<Task>): Promis
   await saveProjectTasks(projectId, tasks);
 
   return updatedTask;
+}
+
+/**
+ * Create a new task
+ * @param data - Task creation data
+ * @returns Created task
+ */
+export async function createTask(data: CreateTaskDto): Promise<Task> {
+  const now = new Date().toISOString();
+
+  const newTask: Task = {
+    id: uuidv4(),
+    projectId: data.projectId,
+    title: data.title,
+    status: 'featurelist',
+    featureList: data.featureList || '',
+    designDocument: null,
+    prd: null,
+    prototype: null,
+    references: data.references || [],
+    qaAnswers: [],
+    revisions: [],
+    isArchived: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const tasks = await getTasksByProject(data.projectId);
+  tasks.push(newTask);
+  await saveProjectTasks(data.projectId, tasks);
+
+  return newTask;
+}
+
+/**
+ * Delete a task
+ * @param taskId - Task ID to delete
+ * @returns true if deleted, false if not found
+ */
+export async function deleteTask(taskId: string): Promise<boolean> {
+  const result = await getTaskById(taskId);
+  if (!result) {
+    return false;
+  }
+
+  const { projectId } = result;
+  const tasks = await getTasksByProject(projectId);
+  const filteredTasks = tasks.filter((t) => t.id !== taskId);
+
+  if (filteredTasks.length === tasks.length) {
+    return false; // Task was not in the list
+  }
+
+  await saveProjectTasks(projectId, filteredTasks);
+  return true;
 }
 
 /**

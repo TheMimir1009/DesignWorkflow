@@ -7,7 +7,7 @@ import request from 'supertest';
 import fs from 'fs/promises';
 import path from 'path';
 import { createApp } from '../server/index.ts';
-import type { Task, Project, ApiResponse } from '../src/types/index.ts';
+import type { Task, Project, ApiResponse, CreateTaskDto, UpdateTaskDto } from '../src/types/index.ts';
 import { v4 as uuidv4 } from 'uuid';
 
 // Test workspace path - must match server's WORKSPACE_PATH
@@ -300,6 +300,268 @@ describe('Tasks API', () => {
 
       expect(body.success).toBe(false);
       expect(body.error).toContain('Target status is required');
+    });
+  });
+
+  describe('POST /api/projects/:projectId/tasks - Create Task', () => {
+    it('should create a new task successfully', async () => {
+      const createData: CreateTaskDto = {
+        title: 'New Feature Task',
+        projectId: testProjectId,
+        featureList: 'Feature description in markdown',
+        references: ['ref-1', 'ref-2'],
+      };
+
+      const response = await request(app)
+        .post(`/api/projects/${testProjectId}/tasks`)
+        .send(createData)
+        .expect('Content-Type', /json/)
+        .expect(201);
+
+      const body = response.body as ApiResponse<Task>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.title).toBe('New Feature Task');
+      expect(body.data!.projectId).toBe(testProjectId);
+      expect(body.data!.featureList).toBe('Feature description in markdown');
+      expect(body.data!.references).toEqual(['ref-1', 'ref-2']);
+      expect(body.data!.status).toBe('featurelist');
+      expect(body.data!.id).toBeDefined();
+    });
+
+    it('should create task with minimal data (title only)', async () => {
+      const createData: CreateTaskDto = {
+        title: 'Minimal Task',
+        projectId: testProjectId,
+      };
+
+      const response = await request(app)
+        .post(`/api/projects/${testProjectId}/tasks`)
+        .send(createData)
+        .expect(201);
+
+      const body = response.body as ApiResponse<Task>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.title).toBe('Minimal Task');
+      expect(body.data!.featureList).toBe('');
+      expect(body.data!.references).toEqual([]);
+    });
+
+    it('should return 400 when title is missing', async () => {
+      const response = await request(app)
+        .post(`/api/projects/${testProjectId}/tasks`)
+        .send({ projectId: testProjectId })
+        .expect(400);
+
+      const body = response.body as ApiResponse<null>;
+
+      expect(body.success).toBe(false);
+      expect(body.error).toContain('Title is required');
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const createData: CreateTaskDto = {
+        title: 'New Task',
+        projectId: 'non-existent-project',
+      };
+
+      const response = await request(app)
+        .post('/api/projects/non-existent-project/tasks')
+        .send(createData)
+        .expect(404);
+
+      const body = response.body as ApiResponse<null>;
+
+      expect(body.success).toBe(false);
+      expect(body.error).toBe('Project not found');
+    });
+
+    it('should persist task to storage', async () => {
+      const createData: CreateTaskDto = {
+        title: 'Persistent Task',
+        projectId: testProjectId,
+      };
+
+      await request(app)
+        .post(`/api/projects/${testProjectId}/tasks`)
+        .send(createData)
+        .expect(201);
+
+      // Verify task is persisted
+      const tasksPath = path.join(WORKSPACE_PATH, testProjectId, 'tasks', 'tasks.json');
+      const tasks = JSON.parse(await fs.readFile(tasksPath, 'utf-8')) as Task[];
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].title).toBe('Persistent Task');
+    });
+  });
+
+  describe('PUT /api/tasks/:id - Update Task', () => {
+    it('should update task title successfully', async () => {
+      const task = await createTestTask(testProjectId, { title: 'Original Title' });
+
+      const updateData: UpdateTaskDto = {
+        title: 'Updated Title',
+      };
+
+      const response = await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .send(updateData)
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      const body = response.body as ApiResponse<Task>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.title).toBe('Updated Title');
+      expect(body.data!.updatedAt).not.toBe(task.updatedAt);
+    });
+
+    it('should update task featureList successfully', async () => {
+      const task = await createTestTask(testProjectId);
+
+      const updateData: UpdateTaskDto = {
+        featureList: 'Updated feature list with **markdown**',
+      };
+
+      const response = await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .send(updateData)
+        .expect(200);
+
+      const body = response.body as ApiResponse<Task>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.featureList).toBe('Updated feature list with **markdown**');
+    });
+
+    it('should update task references successfully', async () => {
+      const task = await createTestTask(testProjectId, { references: ['old-ref'] });
+
+      const updateData: UpdateTaskDto = {
+        references: ['new-ref-1', 'new-ref-2', 'new-ref-3'],
+      };
+
+      const response = await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .send(updateData)
+        .expect(200);
+
+      const body = response.body as ApiResponse<Task>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.references).toEqual(['new-ref-1', 'new-ref-2', 'new-ref-3']);
+    });
+
+    it('should update multiple fields at once', async () => {
+      const task = await createTestTask(testProjectId);
+
+      const updateData: UpdateTaskDto = {
+        title: 'Multi Update',
+        featureList: 'New feature list',
+        references: ['ref-1'],
+      };
+
+      const response = await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .send(updateData)
+        .expect(200);
+
+      const body = response.body as ApiResponse<Task>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.title).toBe('Multi Update');
+      expect(body.data!.featureList).toBe('New feature list');
+      expect(body.data!.references).toEqual(['ref-1']);
+    });
+
+    it('should return 404 for non-existent task', async () => {
+      const updateData: UpdateTaskDto = {
+        title: 'Updated Title',
+      };
+
+      const response = await request(app)
+        .put('/api/tasks/non-existent-id')
+        .send(updateData)
+        .expect(404);
+
+      const body = response.body as ApiResponse<null>;
+
+      expect(body.success).toBe(false);
+      expect(body.error).toBe('Task not found');
+    });
+
+    it('should persist updates to storage', async () => {
+      const task = await createTestTask(testProjectId, { title: 'Original' });
+
+      await request(app)
+        .put(`/api/tasks/${task.id}`)
+        .send({ title: 'Persisted Update' })
+        .expect(200);
+
+      // Verify update is persisted
+      const tasksPath = path.join(WORKSPACE_PATH, testProjectId, 'tasks', 'tasks.json');
+      const tasks = JSON.parse(await fs.readFile(tasksPath, 'utf-8')) as Task[];
+
+      expect(tasks[0].title).toBe('Persisted Update');
+    });
+  });
+
+  describe('DELETE /api/tasks/:id - Delete Task', () => {
+    it('should delete task successfully', async () => {
+      const task = await createTestTask(testProjectId);
+
+      const response = await request(app)
+        .delete(`/api/tasks/${task.id}`)
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      const body = response.body as ApiResponse<{ deleted: boolean }>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.deleted).toBe(true);
+    });
+
+    it('should return 404 for non-existent task', async () => {
+      const response = await request(app)
+        .delete('/api/tasks/non-existent-id')
+        .expect(404);
+
+      const body = response.body as ApiResponse<null>;
+
+      expect(body.success).toBe(false);
+      expect(body.error).toBe('Task not found');
+    });
+
+    it('should remove task from storage', async () => {
+      const task1 = await createTestTask(testProjectId, { title: 'Task 1' });
+      const task2 = await createTestTask(testProjectId, { title: 'Task 2' });
+
+      await request(app)
+        .delete(`/api/tasks/${task1.id}`)
+        .expect(200);
+
+      // Verify task is removed from storage
+      const tasksPath = path.join(WORKSPACE_PATH, testProjectId, 'tasks', 'tasks.json');
+      const tasks = JSON.parse(await fs.readFile(tasksPath, 'utf-8')) as Task[];
+
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].id).toBe(task2.id);
+    });
+
+    it('should delete all tasks when deleting the last one', async () => {
+      const task = await createTestTask(testProjectId);
+
+      await request(app)
+        .delete(`/api/tasks/${task.id}`)
+        .expect(200);
+
+      // Verify tasks array is empty
+      const tasksPath = path.join(WORKSPACE_PATH, testProjectId, 'tasks', 'tasks.json');
+      const tasks = JSON.parse(await fs.readFile(tasksPath, 'utf-8')) as Task[];
+
+      expect(tasks).toHaveLength(0);
     });
   });
 });
