@@ -8,7 +8,7 @@
 | 제목 | 태스크 생성/수정/삭제 UI (Task Management UI) |
 | PRD Phase | Feature 5 |
 | 생성일 | 2026-01-03 |
-| 상태 | Planned |
+| 상태 | Completed |
 | 우선순위 | High |
 | 의존성 | SPEC-KANBAN-001 (완료) |
 | 담당 에이전트 | expert-frontend |
@@ -463,3 +463,4 @@ export async function getTask(taskId: string): Promise<Task>;
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
 | 1.0 | 2026-01-03 | 초안 작성 |
+| 1.1 | 2026-01-04 | 구현 완료 - commit d92788a |
