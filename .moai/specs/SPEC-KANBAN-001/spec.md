@@ -8,7 +8,7 @@
 | 제목 | 칸반 보드 UI (Kanban Board UI) |
 | PRD Phase | Feature 4 |
 | 생성일 | 2026-01-03 |
-| 상태 | Planned |
+| 상태 | Completed |
 | 우선순위 | High |
 | 의존성 | SPEC-PROJECT-001 (완료) |
 | 담당 에이전트 | expert-frontend |
@@ -420,3 +420,4 @@ export const KANBAN_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
 | 1.0 | 2026-01-03 | 초안 작성 |
+| 1.1 | 2026-01-03 | TDD 구현 완료, 273개 테스트 통과, 상태 Completed로 변경 |
