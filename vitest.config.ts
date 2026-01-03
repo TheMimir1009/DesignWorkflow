@@ -8,6 +8,8 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     setupFiles: ['./tests/setup.ts'],
+    // Disable file parallelism to prevent race conditions in API tests
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

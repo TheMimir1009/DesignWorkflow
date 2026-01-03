@@ -1,10 +1,12 @@
 /**
  * Express Server Entry Point
  * Main server configuration with middleware and route setup
+ * TAG-008: Added default references route
  */
 import express, { type Express } from 'express';
 import cors from 'cors';
 import { projectsRouter } from './routes/projects.ts';
+import { referencesRouter } from './routes/references.ts';
 
 /**
  * Create and configure Express application
@@ -19,6 +21,7 @@ export function createApp(): Express {
 
   // Routes
   app.use('/api/projects', projectsRouter);
+  app.use('/api/projects/:projectId/default-references', referencesRouter);
 
   return app;
 }
