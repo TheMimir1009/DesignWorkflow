@@ -10,6 +10,8 @@ import {
   getTasksByProject,
   getTaskById,
   updateTask,
+  createTask,
+  deleteTask,
   isValidStatus,
   generateMockAIContent,
 } from '../utils/taskStorage.ts';
@@ -154,3 +156,130 @@ tasksRouter.post('/:id/trigger-ai', async (req: Request, res: Response): Promise
     sendError(res, 500, 'Failed to trigger AI generation');
   }
 });
+
+/**
+ * PUT /api/tasks/:id - Update task content
+ *
+ * Path Parameters:
+ * - id: Task UUID
+ *
+ * Request Body:
+ * - title?: string
+ * - featureList?: string
+ * - designDocument?: string | null
+ * - prd?: string | null
+ * - prototype?: string | null
+ * - references?: string[]
+ *
+ * Response: ApiResponse<Task>
+ * - 200: Task updated successfully
+ * - 404: Task not found
+ * - 500: Server error
+ */
+tasksRouter.put('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Check if task exists
+    const taskResult = await getTaskById(id);
+    if (!taskResult) {
+      sendError(res, 404, 'Task not found');
+      return;
+    }
+
+    // Update task
+    const updatedTask = await updateTask(id, updates);
+    if (!updatedTask) {
+      sendError(res, 500, 'Failed to update task');
+      return;
+    }
+
+    sendSuccess(res, updatedTask);
+  } catch (error) {
+    console.error('Error updating task:', error);
+    sendError(res, 500, 'Failed to update task');
+  }
+});
+
+/**
+ * DELETE /api/tasks/:id - Delete a task
+ *
+ * Path Parameters:
+ * - id: Task UUID
+ *
+ * Response: ApiResponse<{ deleted: boolean }>
+ * - 200: Task deleted successfully
+ * - 404: Task not found
+ * - 500: Server error
+ */
+tasksRouter.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await deleteTask(id);
+    if (!deleted) {
+      sendError(res, 404, 'Task not found');
+      return;
+    }
+
+    sendSuccess(res, { deleted: true });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    sendError(res, 500, 'Failed to delete task');
+  }
+});
+
+/**
+ * POST /api/projects/:projectId/tasks - Create a new task
+ *
+ * Path Parameters:
+ * - projectId: Project UUID
+ *
+ * Request Body:
+ * - title: string (required)
+ * - featureList?: string
+ * - references?: string[]
+ *
+ * Response: ApiResponse<Task>
+ * - 201: Task created successfully
+ * - 400: Missing required fields
+ * - 404: Project not found
+ * - 500: Server error
+ */
+export async function createProjectTask(req: Request, res: Response): Promise<void> {
+  try {
+    const { projectId } = req.params;
+    const { title, featureList, references } = req.body;
+
+    // Validate title is provided
+    if (!title) {
+      sendError(res, 400, 'Title is required');
+      return;
+    }
+
+    // Check if project exists
+    const project = await getProjectById(projectId);
+    if (!project) {
+      sendError(res, 404, 'Project not found');
+      return;
+    }
+
+    // Create task
+    const newTask = await createTask({
+      title,
+      projectId,
+      featureList,
+      references,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: newTask,
+      error: null,
+    });
+  } catch (error) {
+    console.error('Error creating task:', error);
+    sendError(res, 500, 'Failed to create task');
+  }
+}

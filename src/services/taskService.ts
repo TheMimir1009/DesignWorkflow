@@ -2,7 +2,7 @@
  * Task Service - API Communication Layer
  * Handles all task-related API operations via REST API
  */
-import type { Task, TaskStatus, ApiResponse } from '../types';
+import type { Task, TaskStatus, ApiResponse, CreateTaskDto, UpdateTaskDto } from '../types';
 
 /**
  * Base URL for API requests
@@ -68,4 +68,49 @@ export async function triggerAI(taskId: string, targetStatus: TaskStatus): Promi
     body: JSON.stringify({ targetStatus }),
   });
   return handleResponse<Task>(response);
+}
+
+/**
+ * Create a new task
+ * @param data - Task creation data
+ * @returns Promise resolving to the created task
+ */
+export async function createTask(data: CreateTaskDto): Promise<Task> {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${data.projectId}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Task>(response);
+}
+
+/**
+ * Update a task
+ * @param taskId - Task ID to update
+ * @param data - Partial task update data
+ * @returns Promise resolving to the updated task
+ */
+export async function updateTask(taskId: string, data: UpdateTaskDto): Promise<Task> {
+  const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Task>(response);
+}
+
+/**
+ * Delete a task
+ * @param taskId - Task ID to delete
+ * @returns Promise resolving when task is deleted
+ */
+export async function deleteTask(taskId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+    method: 'DELETE',
+  });
+  await handleResponse<{ success: boolean }>(response);
 }

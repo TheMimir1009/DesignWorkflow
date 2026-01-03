@@ -222,3 +222,28 @@ export interface UpdateProjectDto {
   categories?: string[];
   defaultReferences?: string[];
 }
+
+// Task DTOs for API operations
+export interface CreateTaskDto {
+  title: string;
+  projectId: string;
+  featureList?: string;
+  references?: string[];
+}
+
+export interface UpdateTaskDto {
+  title?: string;
+  featureList?: string;
+  designDocument?: string | null;
+  prd?: string | null;
+  prototype?: string | null;
+  references?: string[];
+}
+
+// Task Modal State for UI components
+export interface TaskModalState {
+  isCreateModalOpen: boolean;
+  isEditModalOpen: boolean;
+  isDeleteConfirmOpen: boolean;
+  selectedTask: Task | null;
+}

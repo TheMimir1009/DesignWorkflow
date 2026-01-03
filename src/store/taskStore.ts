@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Task, TaskStatus } from '../types';
+import type { Task, TaskStatus, CreateTaskDto, UpdateTaskDto } from '../types';
 import * as taskService from '../services/taskService';
 
 /**
@@ -15,6 +15,11 @@ export interface TaskStoreState {
   generatingTasks: Set<string>;
   isLoading: boolean;
   error: string | null;
+  // Modal state
+  isCreateModalOpen: boolean;
+  isEditModalOpen: boolean;
+  isDeleteConfirmOpen: boolean;
+  selectedTask: Task | null;
 }
 
 /**
@@ -28,6 +33,17 @@ export interface TaskStoreActions {
   isGenerating: (taskId: string) => boolean;
   triggerAIGeneration: (taskId: string, targetStatus: TaskStatus) => Promise<void>;
   clearError: () => void;
+  // CRUD actions
+  createTask: (data: CreateTaskDto) => Promise<void>;
+  updateTaskContent: (taskId: string, data: UpdateTaskDto) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  // Modal actions
+  openCreateModal: () => void;
+  closeCreateModal: () => void;
+  openEditModal: (task: Task) => void;
+  closeEditModal: () => void;
+  openDeleteConfirm: (task: Task) => void;
+  closeDeleteConfirm: () => void;
 }
 
 /**
@@ -46,6 +62,11 @@ export const useTaskStore = create<TaskStore>()(
       generatingTasks: new Set<string>(),
       isLoading: false,
       error: null,
+      // Modal state
+      isCreateModalOpen: false,
+      isEditModalOpen: false,
+      isDeleteConfirmOpen: false,
+      selectedTask: null,
 
       // Actions
       fetchTasks: async (projectId: string) => {
@@ -154,6 +175,93 @@ export const useTaskStore = create<TaskStore>()(
 
       clearError: () => {
         set({ error: null }, false, 'clearError');
+      },
+
+      // CRUD actions
+      createTask: async (data: CreateTaskDto) => {
+        try {
+          const newTask = await taskService.createTask(data);
+          const { tasks } = get();
+          set({ tasks: [...tasks, newTask], error: null }, false, 'createTask/success');
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'createTask/error');
+        }
+      },
+
+      updateTaskContent: async (taskId: string, data: UpdateTaskDto) => {
+        const { tasks } = get();
+        const task = tasks.find((t) => t.id === taskId);
+
+        if (!task) {
+          return; // Task not found, do nothing
+        }
+
+        try {
+          const updatedTask = await taskService.updateTask(taskId, data);
+          const currentTasks = get().tasks;
+          const newTasks = currentTasks.map((t) =>
+            t.id === taskId ? updatedTask : t
+          );
+          set({ tasks: newTasks, error: null }, false, 'updateTaskContent/success');
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'updateTaskContent/error');
+        }
+      },
+
+      deleteTask: async (taskId: string) => {
+        const { tasks } = get();
+        const taskIndex = tasks.findIndex((t) => t.id === taskId);
+
+        if (taskIndex === -1) {
+          return; // Task not found, do nothing
+        }
+
+        const originalTask = tasks[taskIndex];
+
+        // Optimistic delete
+        const filteredTasks = tasks.filter((t) => t.id !== taskId);
+        set({ tasks: filteredTasks }, false, 'deleteTask/optimistic');
+
+        try {
+          await taskService.deleteTask(taskId);
+          set({ error: null }, false, 'deleteTask/success');
+        } catch (error) {
+          // Rollback on failure
+          const currentTasks = get().tasks;
+          set({
+            tasks: [...currentTasks.slice(0, taskIndex), originalTask, ...currentTasks.slice(taskIndex)],
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'deleteTask/rollback');
+        }
+      },
+
+      // Modal actions
+      openCreateModal: () => {
+        set({ isCreateModalOpen: true }, false, 'openCreateModal');
+      },
+
+      closeCreateModal: () => {
+        set({ isCreateModalOpen: false }, false, 'closeCreateModal');
+      },
+
+      openEditModal: (task: Task) => {
+        set({ isEditModalOpen: true, selectedTask: task }, false, 'openEditModal');
+      },
+
+      closeEditModal: () => {
+        set({ isEditModalOpen: false, selectedTask: null }, false, 'closeEditModal');
+      },
+
+      openDeleteConfirm: (task: Task) => {
+        set({ isDeleteConfirmOpen: true, selectedTask: task }, false, 'openDeleteConfirm');
+      },
+
+      closeDeleteConfirm: () => {
+        set({ isDeleteConfirmOpen: false, selectedTask: null }, false, 'closeDeleteConfirm');
       },
     }),
     { name: 'TaskStore' }

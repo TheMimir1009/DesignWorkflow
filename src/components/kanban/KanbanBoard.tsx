@@ -20,6 +20,7 @@ import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { useTaskStore } from '../../store/taskStore';
 import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
+import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
 import type { Task, TaskStatus } from '../../types';
 
 /**
@@ -81,6 +82,16 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const fetchTasks = useTaskStore((state) => state.fetchTasks);
   const updateTaskStatus = useTaskStore((state) => state.updateTaskStatus);
   const triggerAIGeneration = useTaskStore((state) => state.triggerAIGeneration);
+
+  // Modal state selectors
+  const isCreateModalOpen = useTaskStore((state) => state.isCreateModalOpen);
+  const isEditModalOpen = useTaskStore((state) => state.isEditModalOpen);
+  const isDeleteConfirmOpen = useTaskStore((state) => state.isDeleteConfirmOpen);
+  const selectedTask = useTaskStore((state) => state.selectedTask);
+  const closeCreateModal = useTaskStore((state) => state.closeCreateModal);
+  const closeEditModal = useTaskStore((state) => state.closeEditModal);
+  const closeDeleteConfirm = useTaskStore((state) => state.closeDeleteConfirm);
+  const deleteTask = useTaskStore((state) => state.deleteTask);
 
   // DnD sensors
   const sensors = useSensors(
@@ -157,6 +168,13 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     [tasks, updateTaskStatus, triggerAIGeneration]
   );
 
+  // Handle delete confirmation
+  const handleDeleteConfirm = useCallback(async () => {
+    if (selectedTask) {
+      await deleteTask(selectedTask.id);
+    }
+  }, [selectedTask, deleteTask]);
+
   // Show loading state
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -192,6 +210,32 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Task Create Modal */}
+      <TaskCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={closeCreateModal}
+        projectId={projectId}
+      />
+
+      {/* Task Edit Modal */}
+      {selectedTask && (
+        <TaskEditModal
+          isOpen={isEditModalOpen}
+          onClose={closeEditModal}
+          task={selectedTask}
+        />
+      )}
+
+      {/* Task Delete Confirmation */}
+      {selectedTask && (
+        <TaskDeleteConfirm
+          isOpen={isDeleteConfirmOpen}
+          onClose={closeDeleteConfirm}
+          task={selectedTask}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
     </div>
   );
 }
