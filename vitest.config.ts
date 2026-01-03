@@ -8,6 +8,9 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     setupFiles: ['./tests/setup.ts'],
+    // Run test files sequentially to avoid workspace directory conflicts
+    // between projects.test.ts and tasks.test.ts
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
