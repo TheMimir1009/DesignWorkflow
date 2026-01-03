@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Header } from './components/layout/Header';
 import { SystemSidebar } from './components/system/SystemSidebar';
+import { KanbanBoard } from './components/kanban';
 import { useProjectStore } from './store/projectStore';
 
 function App() {
-  const { fetchProjects, isLoading, error, currentProjectId } = useProjectStore();
+  const { fetchProjects, currentProject, isLoading, error, currentProjectId } = useProjectStore();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Initialize: fetch projects on mount
@@ -42,17 +43,14 @@ function App() {
               </div>
             )}
 
-            {!isLoading && !error && !currentProjectId && (
+            {!isLoading && !error && currentProject && (
+              <KanbanBoard projectId={currentProject.id} />
+            )}
+
+            {!isLoading && !error && !currentProject && (
               <div className="text-center text-gray-400 py-16">
                 <h2 className="text-2xl font-semibold mb-4">Welcome to AI Workflow Kanban</h2>
                 <p>Select a project from the header to get started, or create a new one.</p>
-              </div>
-            )}
-
-            {!isLoading && !error && currentProjectId && (
-              <div className="text-center text-gray-400 py-16">
-                <h2 className="text-2xl font-semibold mb-4">Project Workspace</h2>
-                <p>Use the sidebar to manage system documents, or start building your workflow.</p>
               </div>
             )}
           </div>
