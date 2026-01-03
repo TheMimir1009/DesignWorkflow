@@ -1,31 +1,82 @@
 /**
  * SystemPreview Component
- * Displays a system document with markdown rendering
+ * Modal for previewing system document content
  */
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useCallback } from 'react';
 import type { SystemDocument } from '../../types';
 
 export interface SystemPreviewProps {
-  document: SystemDocument;
+  systemDoc: SystemDocument | null;
+  isOpen: boolean;
   onClose: () => void;
-  onEdit: () => void;
 }
 
-export function SystemPreview({ document, onClose, onEdit }: SystemPreviewProps) {
+/**
+ * Simple markdown renderer (basic support)
+ */
+function renderMarkdown(content: string): string {
+  // Basic markdown to HTML conversion
+  const html = content
+    // Escape HTML
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // Headers
+    .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium mb-2 mt-4">$1</h3>')
+    .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mb-3 mt-6">$1</h2>')
+    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4">$1</h1>')
+    // Bold and italic
+    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Lists
+    .replace(/^\s*[-*] (.*$)/gm, '<li class="ml-4">$1</li>')
+    // Code blocks
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-gray-100 p-3 rounded my-2 overflow-x-auto"><code>$2</code></pre>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded text-sm">$1</code>')
+    // Line breaks
+    .replace(/\n\n/g, '</p><p class="mb-2">')
+    .replace(/\n/g, '<br />');
+
+  return `<p class="mb-2">${html}</p>`;
+}
+
+/**
+ * System document preview modal
+ */
+export function SystemPreview({ systemDoc, isOpen, onClose }: SystemPreviewProps) {
   const titleId = useId();
 
   // Handle ESC key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       }
-    };
+    },
+    [onClose]
+  );
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      // Prevent body scroll
+      const originalOverflow = window.document.body.style.overflow;
+      window.document.body.style.overflow = 'hidden';
 
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen, handleKeyDown]);
+
+  if (!isOpen || !systemDoc) {
+    return null;
+  }
+
+  // Handle backdrop click
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -34,6 +85,7 @@ export function SystemPreview({ document, onClose, onEdit }: SystemPreviewProps)
 
   return (
     <div
+      data-testid="system-preview-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={handleBackdropClick}
     >
@@ -41,88 +93,72 @@ export function SystemPreview({ document, onClose, onEdit }: SystemPreviewProps)
         role="dialog"
         aria-labelledby={titleId}
         aria-modal="true"
-        className="bg-gray-800 rounded-lg shadow-lg w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-          <div className="flex items-center gap-3">
-            <h2 id={titleId} className="text-xl font-semibold text-white">
-              {document.name}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h2 id={titleId} className="text-lg font-semibold text-gray-900">
+              {systemDoc.name}
             </h2>
-            <span className="text-xs px-2 py-1 bg-blue-600 text-white rounded">
-              {document.category}
-            </span>
+            <p className="text-sm text-gray-500 mt-0.5">{systemDoc.category}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
             aria-label="Close preview"
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
             </svg>
           </button>
         </div>
 
-        {/* Metadata */}
-        <div className="px-6 py-3 border-b border-gray-700 bg-gray-850">
-          {document.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {document.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-          {document.dependencies.length > 0 && (
-            <div className="text-xs text-gray-400">
-              Dependencies: {document.dependencies.length} document(s)
-            </div>
-          )}
-          <div className="text-xs text-gray-500 mt-2">
-            Created: {new Date(document.createdAt).toLocaleDateString()}
-            {' | '}
-            Updated: {new Date(document.updatedAt).toLocaleDateString()}
+        {/* Tags */}
+        {systemDoc.tags.length > 0 && (
+          <div className="px-6 py-2 border-b border-gray-200 flex flex-wrap gap-1">
+            {systemDoc.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
-        </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {document.content ? (
-            <div className="prose prose-invert prose-sm max-w-none">
-              {/* Simple markdown rendering - can be enhanced with react-markdown */}
-              <pre className="whitespace-pre-wrap text-gray-300 font-sans text-sm leading-relaxed">
-                {document.content}
-              </pre>
-            </div>
+          {systemDoc.content ? (
+            <div
+              className="prose prose-sm max-w-none text-gray-700"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(systemDoc.content) }}
+            />
           ) : (
-            <p className="text-gray-500 italic">No content available.</p>
+            <p className="text-gray-400 italic">No content</p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700">
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Close
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onEdit();
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Edit
           </button>
         </div>
       </div>
