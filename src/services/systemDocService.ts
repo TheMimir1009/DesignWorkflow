@@ -5,12 +5,7 @@
 import type { SystemDocument, ApiResponse } from '../types';
 
 /**
- * Base URL for API requests
- */
-export const API_BASE_URL = 'http://localhost:3001';
-
-/**
- * DTO types for system document operations
+ * Create System Document DTO
  */
 export interface CreateSystemDocumentDto {
   name: string;
@@ -20,6 +15,9 @@ export interface CreateSystemDocumentDto {
   dependencies?: string[];
 }
 
+/**
+ * Update System Document DTO
+ */
 export interface UpdateSystemDocumentDto {
   name?: string;
   category?: string;
@@ -27,6 +25,11 @@ export interface UpdateSystemDocumentDto {
   content?: string;
   dependencies?: string[];
 }
+
+/**
+ * Base URL for API requests
+ */
+export const API_BASE_URL = 'http://localhost:3001';
 
 /**
  * Handle API response and throw error if unsuccessful
@@ -48,7 +51,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 /**
  * Fetch all system documents for a project
  * @param projectId - Project ID
- * @returns Promise resolving to array of system documents
+ * @returns Promise resolving to array of system documents sorted by createdAt descending
  */
 export async function getSystemDocuments(projectId: string): Promise<SystemDocument[]> {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems`);
@@ -58,17 +61,12 @@ export async function getSystemDocuments(projectId: string): Promise<SystemDocum
 /**
  * Fetch a single system document by ID
  * @param projectId - Project ID
- * @param documentId - System document ID
+ * @param systemId - System document ID
  * @returns Promise resolving to the system document
- * @throws Error if document not found
+ * @throws Error if system document not found
  */
-export async function getSystemDocument(
-  projectId: string,
-  documentId: string
-): Promise<SystemDocument> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/projects/${projectId}/systems/${documentId}`
-  );
+export async function getSystemDocument(projectId: string, systemId: string): Promise<SystemDocument> {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems/${systemId}`);
   return handleResponse<SystemDocument>(response);
 }
 
@@ -79,10 +77,7 @@ export async function getSystemDocument(
  * @returns Promise resolving to the created system document
  * @throws Error if validation fails or duplicate name exists
  */
-export async function createSystemDocument(
-  projectId: string,
-  data: CreateSystemDocumentDto
-): Promise<SystemDocument> {
+export async function createSystemDocument(projectId: string, data: CreateSystemDocumentDto): Promise<SystemDocument> {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems`, {
     method: 'POST',
     headers: {
@@ -96,84 +91,56 @@ export async function createSystemDocument(
 /**
  * Update an existing system document
  * @param projectId - Project ID
- * @param documentId - System document ID
+ * @param systemId - System document ID
  * @param data - System document update data
  * @returns Promise resolving to the updated system document
- * @throws Error if document not found or validation fails
+ * @throws Error if system document not found or validation fails
  */
 export async function updateSystemDocument(
   projectId: string,
-  documentId: string,
+  systemId: string,
   data: UpdateSystemDocumentDto
 ): Promise<SystemDocument> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/projects/${projectId}/systems/${documentId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems/${systemId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
   return handleResponse<SystemDocument>(response);
 }
 
 /**
  * Delete a system document
  * @param projectId - Project ID
- * @param documentId - System document ID
+ * @param systemId - System document ID
  * @returns Promise resolving when deletion is complete
- * @throws Error if document not found
+ * @throws Error if system document not found
  */
-export async function deleteSystemDocument(
-  projectId: string,
-  documentId: string
-): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/projects/${projectId}/systems/${documentId}`,
-    {
-      method: 'DELETE',
-    }
-  );
+export async function deleteSystemDocument(projectId: string, systemId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems/${systemId}`, {
+    method: 'DELETE',
+  });
   await handleResponse<{ deleted: boolean }>(response);
 }
 
 /**
- * Fetch all unique categories for a project
+ * Fetch unique categories for a project
  * @param projectId - Project ID
- * @returns Promise resolving to array of category names
+ * @returns Promise resolving to array of unique categories sorted alphabetically
  */
 export async function getCategories(projectId: string): Promise<string[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/projects/${projectId}/systems/categories`
-  );
+  const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems/categories`);
   return handleResponse<string[]>(response);
 }
 
 /**
- * Fetch all unique tags for a project
+ * Fetch unique tags for a project
  * @param projectId - Project ID
- * @returns Promise resolving to array of tag names
+ * @returns Promise resolving to array of unique tags sorted alphabetically
  */
 export async function getTags(projectId: string): Promise<string[]> {
   const response = await fetch(`${API_BASE_URL}/api/projects/${projectId}/systems/tags`);
   return handleResponse<string[]>(response);
-}
-
-/**
- * Search system documents by query
- * @param projectId - Project ID
- * @param query - Search query string
- * @returns Promise resolving to array of matching system documents
- */
-export async function searchSystemDocuments(
-  projectId: string,
-  query: string
-): Promise<SystemDocument[]> {
-  const encodedQuery = encodeURIComponent(query);
-  const response = await fetch(
-    `${API_BASE_URL}/api/projects/${projectId}/systems/search?q=${encodedQuery}`
-  );
-  return handleResponse<SystemDocument[]>(response);
 }

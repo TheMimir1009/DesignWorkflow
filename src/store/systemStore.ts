@@ -5,76 +5,96 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { SystemDocument, SystemDocumentState } from '../types';
-import * as systemDocService from '../services/systemDocService';
 import type { CreateSystemDocumentDto, UpdateSystemDocumentDto } from '../services/systemDocService';
+import * as systemDocService from '../services/systemDocService';
 
 /**
  * Extended system store with computed properties and actions
  */
-export interface SystemStore extends SystemDocumentState {
-  // Additional UI state
-  searchQuery: string;
-  selectedTags: string[];
+export interface SystemDocumentStore extends SystemDocumentState {
+  // Additional state
+  categories: string[];
+  allTags: string[];
   selectedCategory: string | null;
-  expandedCategories: string[];
-  previewDocumentId: string | null;
+  selectedTags: string[];
+  searchQuery: string;
 
-  // CRUD Actions
+  // Computed property getter
+  readonly filteredDocuments: SystemDocument[];
+
+  // Actions
   fetchDocuments: (projectId: string) => Promise<void>;
-  createDocument: (projectId: string, data: CreateSystemDocumentDto) => Promise<SystemDocument>;
-  updateDocument: (projectId: string, id: string, data: UpdateSystemDocumentDto) => Promise<SystemDocument>;
-  deleteDocument: (projectId: string, id: string) => Promise<void>;
-
-  // Filter Actions
-  setSearchQuery: (query: string) => void;
-  toggleTag: (tag: string) => void;
+  createDocument: (projectId: string, data: CreateSystemDocumentDto) => Promise<void>;
+  updateDocument: (projectId: string, systemId: string, data: UpdateSystemDocumentDto) => Promise<void>;
+  deleteDocument: (projectId: string, systemId: string) => Promise<void>;
   setSelectedCategory: (category: string | null) => void;
+  toggleTag: (tag: string) => void;
+  setSearchQuery: (query: string) => void;
   clearFilters: () => void;
-
-  // UI Actions
-  toggleCategory: (category: string) => void;
-  setPreviewDocument: (id: string | null) => void;
-  clearDocuments: () => void;
-
-  // Computed Getters
-  getFilteredDocuments: () => SystemDocument[];
-  getCategories: () => string[];
-  getAllTags: () => string[];
-  getDocumentsByCategory: () => Record<string, SystemDocument[]>;
 }
 
 /**
- * Filter documents based on search query, selected tags, and selected category
+ * Selector for filtered documents - use this for accessing filteredDocuments
+ */
+export function selectFilteredDocuments(state: SystemDocumentStore): SystemDocument[] {
+  return filterDocuments(
+    state.documents,
+    state.selectedCategory,
+    state.selectedTags,
+    state.searchQuery
+  );
+}
+
+/**
+ * Sort documents by createdAt in descending order (newest first)
+ */
+function sortDocumentsByDate(documents: SystemDocument[]): SystemDocument[] {
+  return [...documents].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+/**
+ * Filter documents based on category, tags, and search query
  */
 function filterDocuments(
   documents: SystemDocument[],
-  searchQuery: string,
+  selectedCategory: string | null,
   selectedTags: string[],
-  selectedCategory: string | null
+  searchQuery: string
 ): SystemDocument[] {
-  return documents.filter((doc) => {
-    // Search query filter (name or tags)
-    const matchesSearch =
-      !searchQuery ||
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+  return documents.filter(doc => {
+    // Filter by category
+    if (selectedCategory && doc.category !== selectedCategory) {
+      return false;
+    }
 
-    // Tag filter (AND logic - must have all selected tags)
-    const matchesTags =
-      selectedTags.length === 0 ||
-      selectedTags.every((tag) => doc.tags.includes(tag));
+    // Filter by tags (AND logic - document must have all selected tags)
+    if (selectedTags.length > 0) {
+      const hasAllTags = selectedTags.every(tag => doc.tags.includes(tag));
+      if (!hasAllTags) {
+        return false;
+      }
+    }
 
-    // Category filter
-    const matchesCategory = !selectedCategory || doc.category === selectedCategory;
+    // Filter by search query (case-insensitive search in name and content)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const nameMatch = doc.name.toLowerCase().includes(query);
+      const contentMatch = doc.content.toLowerCase().includes(query);
+      if (!nameMatch && !contentMatch) {
+        return false;
+      }
+    }
 
-    return matchesSearch && matchesTags && matchesCategory;
+    return true;
   });
 }
 
 /**
- * System store with Zustand
+ * System document store with Zustand
  */
-export const useSystemStore = create<SystemStore>()(
+export const useSystemStore = create<SystemDocumentStore>()(
   devtools(
     (set, get) => ({
       // Initial state
@@ -82,35 +102,46 @@ export const useSystemStore = create<SystemStore>()(
       selectedDocumentIds: [],
       isLoading: false,
       error: null,
-      searchQuery: '',
-      selectedTags: [],
+      categories: [],
+      allTags: [],
       selectedCategory: null,
-      expandedCategories: [],
-      previewDocumentId: null,
+      selectedTags: [],
+      searchQuery: '',
 
-      // CRUD Actions
+      // Computed property using getter
+      get filteredDocuments() {
+        const state = get();
+        return filterDocuments(
+          state.documents,
+          state.selectedCategory,
+          state.selectedTags,
+          state.searchQuery
+        );
+      },
+
+      // Actions
       fetchDocuments: async (projectId: string) => {
         set({ isLoading: true, error: null }, false, 'fetchDocuments/start');
         try {
-          const documents = await systemDocService.getSystemDocuments(projectId);
-          set(
-            {
-              documents,
-              isLoading: false,
-              error: null,
-            },
-            false,
-            'fetchDocuments/success'
-          );
+          const [documents, categories, allTags] = await Promise.all([
+            systemDocService.getSystemDocuments(projectId),
+            systemDocService.getCategories(projectId),
+            systemDocService.getTags(projectId),
+          ]);
+          const sortedDocuments = sortDocumentsByDate(documents);
+
+          set({
+            documents: sortedDocuments,
+            categories,
+            allTags,
+            isLoading: false,
+            error: null,
+          }, false, 'fetchDocuments/success');
         } catch (error) {
-          set(
-            {
-              isLoading: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-            false,
-            'fetchDocuments/error'
-          );
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'fetchDocuments/error');
         }
       },
 
@@ -119,208 +150,102 @@ export const useSystemStore = create<SystemStore>()(
         try {
           const newDocument = await systemDocService.createSystemDocument(projectId, data);
 
-          set(
-            (state) => ({
-              documents: [...state.documents, newDocument],
-              expandedCategories: state.expandedCategories.includes(newDocument.category)
-                ? state.expandedCategories
-                : [...state.expandedCategories, newDocument.category],
+          set(state => {
+            const newDocuments = sortDocumentsByDate([newDocument, ...state.documents]);
+            // Update categories and tags if new ones are added
+            const newCategories = state.categories.includes(newDocument.category)
+              ? state.categories
+              : [...state.categories, newDocument.category].sort();
+            const newTags = [...new Set([...state.allTags, ...newDocument.tags])].sort();
+
+            return {
+              documents: newDocuments,
+              categories: newCategories,
+              allTags: newTags,
               isLoading: false,
               error: null,
-            }),
-            false,
-            'createDocument/success'
-          );
-
-          return newDocument;
+            };
+          }, false, 'createDocument/success');
         } catch (error) {
-          set(
-            {
-              isLoading: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-            false,
-            'createDocument/error'
-          );
-          throw error;
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'createDocument/error');
         }
       },
 
-      updateDocument: async (
-        projectId: string,
-        id: string,
-        data: UpdateSystemDocumentDto
-      ) => {
+      updateDocument: async (projectId: string, systemId: string, data: UpdateSystemDocumentDto) => {
         set({ isLoading: true, error: null }, false, 'updateDocument/start');
         try {
-          const updatedDocument = await systemDocService.updateSystemDocument(
-            projectId,
-            id,
-            data
-          );
+          const updatedDocument = await systemDocService.updateSystemDocument(projectId, systemId, data);
 
-          set(
-            (state) => ({
-              documents: state.documents.map((doc) =>
-                doc.id === id ? updatedDocument : doc
-              ),
+          set(state => {
+            const newDocuments = state.documents.map(doc =>
+              doc.id === systemId ? updatedDocument : doc
+            );
+            return {
+              documents: newDocuments,
               isLoading: false,
               error: null,
-            }),
-            false,
-            'updateDocument/success'
-          );
-
-          return updatedDocument;
+            };
+          }, false, 'updateDocument/success');
         } catch (error) {
-          set(
-            {
-              isLoading: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-            false,
-            'updateDocument/error'
-          );
-          throw error;
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'updateDocument/error');
         }
       },
 
-      deleteDocument: async (projectId: string, id: string) => {
+      deleteDocument: async (projectId: string, systemId: string) => {
         set({ isLoading: true, error: null }, false, 'deleteDocument/start');
         try {
-          await systemDocService.deleteSystemDocument(projectId, id);
+          await systemDocService.deleteSystemDocument(projectId, systemId);
 
-          set(
-            (state) => ({
-              documents: state.documents.filter((doc) => doc.id !== id),
-              selectedDocumentIds: state.selectedDocumentIds.filter((docId) => docId !== id),
-              previewDocumentId: state.previewDocumentId === id ? null : state.previewDocumentId,
+          set(state => {
+            const remainingDocuments = state.documents.filter(doc => doc.id !== systemId);
+            // Remove from selected if it was selected
+            const remainingSelectedIds = state.selectedDocumentIds.filter(id => id !== systemId);
+
+            return {
+              documents: remainingDocuments,
+              selectedDocumentIds: remainingSelectedIds,
               isLoading: false,
               error: null,
-            }),
-            false,
-            'deleteDocument/success'
-          );
+            };
+          }, false, 'deleteDocument/success');
         } catch (error) {
-          set(
-            {
-              isLoading: false,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-            false,
-            'deleteDocument/error'
-          );
-          throw error;
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          }, false, 'deleteDocument/error');
         }
-      },
-
-      // Filter Actions
-      setSearchQuery: (query: string) => {
-        set({ searchQuery: query }, false, 'setSearchQuery');
-      },
-
-      toggleTag: (tag: string) => {
-        set(
-          (state) => ({
-            selectedTags: state.selectedTags.includes(tag)
-              ? state.selectedTags.filter((t) => t !== tag)
-              : [...state.selectedTags, tag],
-          }),
-          false,
-          'toggleTag'
-        );
       },
 
       setSelectedCategory: (category: string | null) => {
         set({ selectedCategory: category }, false, 'setSelectedCategory');
       },
 
+      toggleTag: (tag: string) => {
+        set(state => {
+          const isSelected = state.selectedTags.includes(tag);
+          const newTags = isSelected
+            ? state.selectedTags.filter(t => t !== tag)
+            : [...state.selectedTags, tag];
+          return { selectedTags: newTags };
+        }, false, 'toggleTag');
+      },
+
+      setSearchQuery: (query: string) => {
+        set({ searchQuery: query }, false, 'setSearchQuery');
+      },
+
       clearFilters: () => {
-        set(
-          {
-            searchQuery: '',
-            selectedTags: [],
-            selectedCategory: null,
-          },
-          false,
-          'clearFilters'
-        );
-      },
-
-      // UI Actions
-      toggleCategory: (category: string) => {
-        set(
-          (state) => ({
-            expandedCategories: state.expandedCategories.includes(category)
-              ? state.expandedCategories.filter((c) => c !== category)
-              : [...state.expandedCategories, category],
-          }),
-          false,
-          'toggleCategory'
-        );
-      },
-
-      setPreviewDocument: (id: string | null) => {
-        set({ previewDocumentId: id }, false, 'setPreviewDocument');
-      },
-
-      clearDocuments: () => {
-        set(
-          {
-            documents: [],
-            selectedDocumentIds: [],
-            searchQuery: '',
-            selectedTags: [],
-            selectedCategory: null,
-            expandedCategories: [],
-            previewDocumentId: null,
-            error: null,
-          },
-          false,
-          'clearDocuments'
-        );
-      },
-
-      // Computed Getters
-      getFilteredDocuments: () => {
-        const state = get();
-        return filterDocuments(
-          state.documents,
-          state.searchQuery,
-          state.selectedTags,
-          state.selectedCategory
-        );
-      },
-
-      getCategories: () => {
-        const state = get();
-        const categories = new Set(state.documents.map((doc) => doc.category));
-        return Array.from(categories).sort();
-      },
-
-      getAllTags: () => {
-        const state = get();
-        const tags = new Set(state.documents.flatMap((doc) => doc.tags));
-        return Array.from(tags).sort();
-      },
-
-      getDocumentsByCategory: () => {
-        const state = get();
-        const grouped: Record<string, SystemDocument[]> = {};
-
-        for (const doc of state.documents) {
-          if (!grouped[doc.category]) {
-            grouped[doc.category] = [];
-          }
-          grouped[doc.category].push(doc);
-        }
-
-        // Sort documents within each category by name
-        for (const category of Object.keys(grouped)) {
-          grouped[category].sort((a, b) => a.name.localeCompare(b.name));
-        }
-
-        return grouped;
+        set({
+          selectedCategory: null,
+          selectedTags: [],
+          searchQuery: '',
+        }, false, 'clearFilters');
       },
     }),
     { name: 'SystemStore' }
