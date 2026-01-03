@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { Header } from './components/layout/Header';
+import { KanbanBoard } from './components/kanban';
 import { useProjectStore } from './store/projectStore';
 
 function App() {
-  const { fetchProjects, isLoading, error } = useProjectStore();
+  const { fetchProjects, currentProject, isLoading, error } = useProjectStore();
 
   // Initialize: fetch projects on mount
   useEffect(() => {
@@ -27,7 +28,11 @@ function App() {
           </div>
         )}
 
-        {!isLoading && !error && (
+        {!isLoading && !error && currentProject && (
+          <KanbanBoard projectId={currentProject.id} />
+        )}
+
+        {!isLoading && !error && !currentProject && (
           <div className="text-center text-gray-400 py-16">
             <h2 className="text-2xl font-semibold mb-4">Welcome to AI Workflow Kanban</h2>
             <p>Select a project from the header to get started, or create a new one.</p>
