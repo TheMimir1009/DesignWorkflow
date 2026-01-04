@@ -247,3 +247,71 @@ export interface TaskModalState {
   isDeleteConfirmOpen: boolean;
   selectedTask: Task | null;
 }
+
+// Template system types
+// Template category for categorizing templates
+export type TemplateCategory = 'qa-questions' | 'document-structure' | 'prompts';
+
+// Variable type for template variables
+export type TemplateVariableType = 'text' | 'textarea' | 'select' | 'number';
+
+// Template variable definition
+export interface TemplateVariable {
+  name: string;
+  description: string;
+  defaultValue: string | null;
+  required: boolean;
+  type: TemplateVariableType;
+  options: string[] | null;
+}
+
+// Template represents a reusable document template
+export interface Template {
+  id: string;
+  name: string;
+  category: TemplateCategory;
+  description: string;
+  content: string;
+  variables: TemplateVariable[];
+  isDefault: boolean;
+  projectId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Template state for Zustand store
+export interface TemplateState {
+  templates: Template[];
+  selectedTemplateId: string | null;
+  selectedCategory: TemplateCategory | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Template DTOs for API operations
+export interface CreateTemplateDto {
+  name: string;
+  category: TemplateCategory;
+  description?: string;
+  content?: string;
+  variables?: TemplateVariable[];
+}
+
+export interface UpdateTemplateDto {
+  name?: string;
+  category?: TemplateCategory;
+  description?: string;
+  content?: string;
+  variables?: TemplateVariable[];
+}
+
+// Template apply request
+export interface ApplyTemplateRequest {
+  variableValues: Record<string, string>;
+}
+
+// Template apply response
+export interface ApplyTemplateResponse {
+  content: string;
+  appliedAt: string;
+}
