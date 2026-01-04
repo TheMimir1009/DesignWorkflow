@@ -401,6 +401,9 @@ describe('Tasks API', () => {
     it('should update task title successfully', async () => {
       const task = await createTestTask(testProjectId, { title: 'Original Title' });
 
+      // Small delay to ensure updatedAt timestamp differs
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       const updateData: UpdateTaskDto = {
         title: 'Updated Title',
       };

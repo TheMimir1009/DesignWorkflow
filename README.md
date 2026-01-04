@@ -2,6 +2,17 @@
 
 Game design pipeline visualization and AI-powered document generation workflow system.
 
+## Project Progress
+
+**Current Progress: 65%**
+
+### Completed Features
+
+- Project Management (SPEC-PROJECT-001)
+- Kanban Board UI (SPEC-KANBAN-001)
+- Task Management (SPEC-TASK-001)
+- System Document Management (SPEC-SYSTEM-001)
+
 ## Project Context
 
 This project implements a Kanban board-based workflow system for game planning documents. It automates the pipeline from Feature List to Design Document to PRD to Prototype, with AI assistance at each stage.

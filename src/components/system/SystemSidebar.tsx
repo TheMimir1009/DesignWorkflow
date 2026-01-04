@@ -3,6 +3,7 @@
  * Collapsible sidebar for system document management
  */
 import { useState, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSystemStore, selectFilteredDocuments } from '../../store/systemStore';
 import { SystemList } from './SystemList';
 import { SystemPreview } from './SystemPreview';
@@ -39,7 +40,7 @@ export function SystemSidebar({ projectId, isExpanded, onToggle }: SystemSidebar
     clearFilters,
   } = useSystemStore();
 
-  const filteredDocuments = useSystemStore(selectFilteredDocuments);
+  const filteredDocuments = useSystemStore(useShallow(selectFilteredDocuments));
 
   // Fetch documents when project changes
   useEffect(() => {
