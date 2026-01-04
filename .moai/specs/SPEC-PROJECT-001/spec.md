@@ -47,15 +47,15 @@ AI Workflow Kanban 시스템에서 여러 게임 프로젝트를 독립적으로
 ### 2.1 기술 스택
 
 **프론트엔드**:
-- React 18.x
-- TypeScript 5.x
+- React 19
+- TypeScript 5.9
 - Zustand (상태 관리)
-- Tailwind CSS 3.x
+- Tailwind CSS 4
 
 **백엔드**:
 - Node.js 20.x LTS
 - Express 4.x
-- TypeScript 5.x
+- TypeScript 5.9
 
 **저장소**:
 - 파일 기반 저장 (workspace/projects/)
@@ -357,3 +357,4 @@ workspace/
 |------|------|-----------|
 | 1.0 | 2026-01-02 | 초안 작성 |
 | 1.1 | 2026-01-02 | 구현 완료 - 상태 Completed로 변경 |
+| 1.2 | 2026-01-04 | 기술 스택 버전 업데이트 (React 19, TypeScript 5.9, Tailwind CSS 4) |

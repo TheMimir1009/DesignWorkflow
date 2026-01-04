@@ -1,0 +1,70 @@
+/**
+ * KanbanColumn Component
+ * Drop zone column for the Kanban board
+ */
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { KanbanCard } from './KanbanCard';
+import type { Task } from '../../types';
+import type { KanbanColumnDef } from '../../types/kanban';
+
+/**
+ * Props for KanbanColumn component
+ */
+export interface KanbanColumnProps {
+  /** Column definition */
+  column: KanbanColumnDef;
+  /** Tasks in this column */
+  tasks: Task[];
+  /** Set of task IDs currently generating content */
+  generatingTasks: Set<string>;
+}
+
+/**
+ * KanbanColumn - Drop zone column for Kanban board
+ */
+export function KanbanColumn({ column, tasks, generatingTasks }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+  });
+
+  const taskIds = tasks.map((task) => task.id);
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-testid={`kanban-column-${column.id}`}
+      className={`
+        flex flex-col w-72 min-h-[500px] bg-gray-100 rounded-lg
+        ${isOver ? 'ring-2 ring-blue-400 bg-blue-50' : ''}
+      `}
+    >
+      {/* Column Header */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-200">
+        <h3 className="font-semibold text-gray-700">{column.title}</h3>
+        <span className="flex items-center justify-center w-6 h-6 text-sm font-medium text-gray-600 bg-gray-200 rounded-full">
+          {tasks.length}
+        </span>
+      </div>
+
+      {/* Tasks List */}
+      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+        <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+          {tasks.length === 0 ? (
+            <div className="flex items-center justify-center h-24 text-gray-400 text-sm">
+              No tasks
+            </div>
+          ) : (
+            tasks.map((task) => (
+              <KanbanCard
+                key={task.id}
+                task={task}
+                isGenerating={generatingTasks.has(task.id)}
+              />
+            ))
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}

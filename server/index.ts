@@ -5,6 +5,11 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import { projectsRouter } from './routes/projects.ts';
+import { systemsRouter } from './routes/systems.ts';
+import { tasksRouter, getProjectTasks, createProjectTask } from './routes/tasks.ts';
+import { templatesRouter } from './routes/templates.ts';
+import { questionsRouter } from './routes/questions.ts';
+import { qaSessionsRouter } from './routes/qa-sessions.ts';
 
 /**
  * Create and configure Express application
@@ -19,6 +24,19 @@ export function createApp(): Express {
 
   // Routes
   app.use('/api/projects', projectsRouter);
+  app.use('/api/projects/:projectId/systems', systemsRouter);
+  app.use('/api/tasks', tasksRouter);
+
+  // Project-scoped routes
+  app.get('/api/projects/:projectId/tasks', getProjectTasks);
+  app.post('/api/projects/:projectId/tasks', createProjectTask);
+
+  // Templates routes
+  app.use('/api/templates', templatesRouter);
+
+  // QA routes
+  app.use('/api/questions', questionsRouter);
+  app.use('/api/qa-sessions', qaSessionsRouter);
 
   return app;
 }

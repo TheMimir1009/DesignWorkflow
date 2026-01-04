@@ -42,10 +42,10 @@ PRD의 Part A (Phase 1.1 - 1.4)에 해당하는 개발 환경 구축 작업:
 | 기술 | 버전 | 용도 |
 |------|------|------|
 | Node.js | 20.x LTS | 런타임 환경 |
-| React | 18.x | UI 컴포넌트 라이브러리 |
-| Vite | Latest | 빌드 도구 및 개발 서버 |
-| TypeScript | 5.x | 타입 안전성 |
-| Tailwind CSS | 3.x | 유틸리티 기반 CSS 프레임워크 |
+| React | 19 | UI 컴포넌트 라이브러리 |
+| Vite | 7 | 빌드 도구 및 개발 서버 |
+| TypeScript | 5.9 | 타입 안전성 |
+| Tailwind CSS | 4 | 유틸리티 기반 CSS 프레임워크 |
 
 ### 2.2 사전 요구사항
 
@@ -441,3 +441,4 @@ interface Question {
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
 | 1.0 | 2026-01-02 | 초안 작성 |
+| 1.1 | 2026-01-04 | 기술 스택 버전 업데이트 (React 19, TypeScript 5.9, Tailwind CSS 4, Vite 7) |

@@ -63,3 +63,36 @@ export function validateDescription(description: unknown): ValidationResult {
 
   return { valid: true };
 }
+
+/**
+ * Category validation constraints
+ */
+const CATEGORY_MIN_LENGTH = 1;
+const CATEGORY_MAX_LENGTH = 50;
+
+/**
+ * Validate system document category
+ * @param category - Category value to validate
+ * @returns ValidationResult with valid flag and optional error message
+ */
+export function validateCategory(category: unknown): ValidationResult {
+  if (category === undefined || category === null) {
+    return { valid: false, error: 'category is required' };
+  }
+
+  if (typeof category !== 'string') {
+    return { valid: false, error: 'category must be a string' };
+  }
+
+  const trimmedCategory = category.trim();
+
+  if (trimmedCategory.length < CATEGORY_MIN_LENGTH) {
+    return { valid: false, error: 'category cannot be empty' };
+  }
+
+  if (category.length > CATEGORY_MAX_LENGTH) {
+    return { valid: false, error: `category must be ${CATEGORY_MAX_LENGTH} characters or less` };
+  }
+
+  return { valid: true };
+}
