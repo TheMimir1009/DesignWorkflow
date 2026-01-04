@@ -3,7 +3,7 @@
  * SPEC-REFERENCE-001: Auto-apply default references on project switch
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useApplyDefaultReferences } from '../../src/hooks/useApplyDefaultReferences';
 import { useReferenceStore } from '../../src/store/referenceStore';
 import type { Project } from '../../src/types';
@@ -44,7 +44,7 @@ describe('useApplyDefaultReferences', () => {
   });
 
   it('should apply default references when project changes', () => {
-    const { rerender } = renderHook(
+    renderHook(
       ({ project }) => useApplyDefaultReferences(project),
       { initialProps: { project: mockProject } }
     );
