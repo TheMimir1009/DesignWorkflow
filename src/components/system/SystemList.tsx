@@ -1,6 +1,7 @@
 /**
  * SystemList Component
  * List display for system documents grouped by category
+ * SPEC-REFERENCE-001: Enhanced with selectable mode for reference selection
  */
 import { useState } from 'react';
 import type { SystemDocument } from '../../types';
@@ -12,6 +13,12 @@ export interface SystemListProps {
   onDelete: (id: string) => void;
   onPreview: (id: string) => void;
   isLoading?: boolean;
+  /** Enable selection mode for reference picking */
+  selectable?: boolean;
+  /** Set of currently selected document IDs */
+  selectedIds?: Set<string>;
+  /** Callback when a document selection is toggled */
+  onToggleSelect?: (id: string) => void;
 }
 
 /**
@@ -37,6 +44,9 @@ export function SystemList({
   onDelete,
   onPreview,
   isLoading = false,
+  selectable = false,
+  selectedIds = new Set(),
+  onToggleSelect,
 }: SystemListProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
@@ -142,6 +152,9 @@ export function SystemList({
                     onEdit={() => onEdit(doc.id)}
                     onDelete={() => onDelete(doc.id)}
                     onPreview={() => onPreview(doc.id)}
+                    selectable={selectable}
+                    isSelected={selectedIds.has(doc.id)}
+                    onToggleSelect={onToggleSelect}
                   />
                 ))}
               </div>

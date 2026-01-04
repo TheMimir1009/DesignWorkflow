@@ -162,4 +162,45 @@ describe('SystemList', () => {
       expect(defaultProps.onPreview).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('Selectable Mode', () => {
+    it('should render checkboxes when selectable is true', () => {
+      render(<SystemList {...defaultProps} selectable={true} />);
+
+      const checkboxes = screen.getAllByRole('checkbox');
+      expect(checkboxes.length).toBeGreaterThan(0);
+    });
+
+    it('should not render checkboxes when selectable is false', () => {
+      render(<SystemList {...defaultProps} selectable={false} />);
+
+      expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    });
+
+    it('should show selected state for documents in selectedIds', () => {
+      const selectedIds = new Set(['system-1']);
+      render(<SystemList {...defaultProps} selectable={true} selectedIds={selectedIds} />);
+
+      const checkboxes = screen.getAllByRole('checkbox');
+      // First checkbox should be checked (Combat System is in selectedIds)
+      expect(checkboxes.find(cb => (cb as HTMLInputElement).checked)).toBeTruthy();
+    });
+
+    it('should call onToggleSelect when checkbox is clicked', async () => {
+      const mockToggleSelect = vi.fn();
+      render(
+        <SystemList
+          {...defaultProps}
+          selectable={true}
+          selectedIds={new Set()}
+          onToggleSelect={mockToggleSelect}
+        />
+      );
+
+      const checkboxes = screen.getAllByRole('checkbox');
+      await userEvent.click(checkboxes[0]);
+
+      expect(mockToggleSelect).toHaveBeenCalled();
+    });
+  });
 });

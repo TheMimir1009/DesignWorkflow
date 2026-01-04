@@ -1,6 +1,7 @@
 /**
  * SystemCard Component
  * Card display for a system document with actions
+ * SPEC-REFERENCE-001: Enhanced with selectable mode for reference selection
  */
 import type { SystemDocument } from '../../types';
 
@@ -9,18 +10,52 @@ export interface SystemCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onPreview: () => void;
+  /** Enable selection checkbox */
+  selectable?: boolean;
+  /** Whether the card is currently selected */
+  isSelected?: boolean;
+  /** Callback when selection is toggled */
+  onToggleSelect?: (id: string) => void;
 }
 
 /**
  * Card component for displaying a system document
+ * Supports selectable mode for reference document selection
  */
-export function SystemCard({ document, onEdit, onDelete, onPreview }: SystemCardProps) {
+export function SystemCard({
+  document,
+  onEdit,
+  onDelete,
+  onPreview,
+  selectable = false,
+  isSelected = false,
+  onToggleSelect,
+}: SystemCardProps) {
+  const handleCheckboxChange = () => {
+    onToggleSelect?.(document.id);
+  };
+
   return (
     <div
       data-testid="system-card"
-      className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+      className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${
+        isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''
+      }`}
     >
       <div className="flex items-start justify-between">
+        {/* Checkbox for selectable mode */}
+        {selectable && (
+          <div className="flex items-center mr-3">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={handleCheckboxChange}
+              aria-label={`Select ${document.name}`}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+          </div>
+        )}
+
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-medium text-gray-900 truncate">
             {document.name}

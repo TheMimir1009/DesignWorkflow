@@ -78,4 +78,72 @@ describe('SystemCard', () => {
 
     expect(screen.queryByText('combat')).not.toBeInTheDocument();
   });
+
+  describe('selectable mode', () => {
+    const selectableProps = {
+      ...defaultProps,
+      selectable: true,
+      isSelected: false,
+      onToggleSelect: vi.fn(),
+    };
+
+    it('should render checkbox when selectable is true', () => {
+      render(<SystemCard {...selectableProps} />);
+
+      expect(screen.getByRole('checkbox')).toBeInTheDocument();
+    });
+
+    it('should not render checkbox when selectable is false', () => {
+      render(<SystemCard {...defaultProps} />);
+
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    });
+
+    it('should show checkbox as checked when isSelected is true', () => {
+      render(<SystemCard {...selectableProps} isSelected={true} />);
+
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).toBeChecked();
+    });
+
+    it('should show checkbox as unchecked when isSelected is false', () => {
+      render(<SystemCard {...selectableProps} isSelected={false} />);
+
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it('should call onToggleSelect when checkbox is clicked', async () => {
+      const mockToggleSelect = vi.fn();
+      render(<SystemCard {...selectableProps} onToggleSelect={mockToggleSelect} />);
+
+      const checkbox = screen.getByRole('checkbox');
+      await userEvent.click(checkbox);
+
+      expect(mockToggleSelect).toHaveBeenCalledWith('system-1');
+    });
+
+    it('should not call onToggleSelect when checkbox is clicked but onToggleSelect is not provided', async () => {
+      render(<SystemCard {...defaultProps} selectable={true} isSelected={false} />);
+
+      const checkbox = screen.getByRole('checkbox');
+      await userEvent.click(checkbox);
+
+      // Should not throw error
+    });
+
+    it('should have proper aria-label for checkbox', () => {
+      render(<SystemCard {...selectableProps} />);
+
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).toHaveAccessibleName(/select combat system/i);
+    });
+
+    it('should show selected styling when isSelected is true', () => {
+      const { container } = render(<SystemCard {...selectableProps} isSelected={true} />);
+
+      const card = container.querySelector('[data-testid="system-card"]');
+      expect(card).toHaveClass('ring-2');
+    });
+  });
 });
