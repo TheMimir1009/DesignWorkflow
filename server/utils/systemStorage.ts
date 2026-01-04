@@ -286,3 +286,40 @@ export async function getUniqueTags(projectId: string): Promise<string[]> {
   const uniqueTags = [...new Set(allTags)];
   return uniqueTags.sort();
 }
+
+/**
+ * Ensure systems directory exists
+ * @param projectId - Project UUID
+ */
+export async function ensureSystemsDirectoryExists(projectId: string): Promise<void> {
+  const systemsDir = getSystemsPath(projectId);
+  await fs.mkdir(systemsDir, { recursive: true });
+}
+
+/**
+ * Save a system document (create or update)
+ * Used for backward compatibility with tests
+ * @param projectId - Project UUID
+ * @param doc - Full system document to save
+ */
+export async function saveSystemDocument(projectId: string, doc: SystemDocument): Promise<void> {
+  const systems = await readSystemsJson(projectId);
+  const existingIndex = systems.findIndex(s => s.id === doc.id);
+
+  const { content, ...metadata } = doc;
+
+  if (existingIndex >= 0) {
+    // Update existing
+    systems[existingIndex] = metadata;
+  } else {
+    // Add new
+    systems.push(metadata);
+  }
+
+  await writeSystemsJson(projectId, systems);
+  await writeSystemContent(projectId, doc.id, content);
+}
+
+// Alias exports for backward compatibility
+export { getUniqueCategories as getCategories };
+export { getUniqueTags as getTags };

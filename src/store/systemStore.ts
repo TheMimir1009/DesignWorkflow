@@ -18,6 +18,8 @@ export interface SystemDocumentStore extends SystemDocumentState {
   selectedCategory: string | null;
   selectedTags: string[];
   searchQuery: string;
+  expandedCategories: string[];
+  previewDocumentId: string | null;
 
   // Computed property getter
   readonly filteredDocuments: SystemDocument[];
@@ -31,6 +33,11 @@ export interface SystemDocumentStore extends SystemDocumentState {
   toggleTag: (tag: string) => void;
   setSearchQuery: (query: string) => void;
   clearFilters: () => void;
+  clearDocuments: () => void;
+  getCategories: () => string[];
+  getDocumentsByCategory: () => Record<string, SystemDocument[]>;
+  toggleCategory: (category: string) => void;
+  setPreviewDocument: (id: string | null) => void;
 }
 
 /**
@@ -107,6 +114,8 @@ export const useSystemStore = create<SystemDocumentStore>()(
       selectedCategory: null,
       selectedTags: [],
       searchQuery: '',
+      expandedCategories: [],
+      previewDocumentId: null,
 
       // Computed property using getter
       get filteredDocuments() {
@@ -246,6 +255,49 @@ export const useSystemStore = create<SystemDocumentStore>()(
           selectedTags: [],
           searchQuery: '',
         }, false, 'clearFilters');
+      },
+
+      clearDocuments: () => {
+        set({
+          documents: [],
+          categories: [],
+          allTags: [],
+          selectedDocumentIds: [],
+          isLoading: false,
+          error: null,
+        }, false, 'clearDocuments');
+      },
+
+      getCategories: () => {
+        const state = get();
+        const uniqueCategories = [...new Set(state.documents.map(doc => doc.category))];
+        return uniqueCategories.sort();
+      },
+
+      getDocumentsByCategory: () => {
+        const state = get();
+        const result: Record<string, SystemDocument[]> = {};
+        state.documents.forEach(doc => {
+          if (!result[doc.category]) {
+            result[doc.category] = [];
+          }
+          result[doc.category].push(doc);
+        });
+        return result;
+      },
+
+      toggleCategory: (category: string) => {
+        set(state => {
+          const isExpanded = state.expandedCategories.includes(category);
+          const newExpanded = isExpanded
+            ? state.expandedCategories.filter(c => c !== category)
+            : [...state.expandedCategories, category];
+          return { expandedCategories: newExpanded };
+        }, false, 'toggleCategory');
+      },
+
+      setPreviewDocument: (id: string | null) => {
+        set({ previewDocumentId: id }, false, 'setPreviewDocument');
       },
     }),
     { name: 'SystemStore' }

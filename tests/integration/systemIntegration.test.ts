@@ -3,7 +3,7 @@
  * Tests for the complete system document flow including API, Store, and UI interactions
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { useSystemStore } from '../../src/store/systemStore';
+import { useSystemStore, selectFilteredDocuments } from '../../src/store/systemStore';
 import * as systemDocService from '../../src/services/systemDocService';
 import type { SystemDocument } from '../../src/types';
 
@@ -40,6 +40,8 @@ describe('System Document Integration Tests', () => {
     it('should fetch documents and update store state', async () => {
       const documents = [mockDocument];
       mockSystemDocService.getSystemDocuments.mockResolvedValueOnce(documents);
+      mockSystemDocService.getCategories.mockResolvedValueOnce(['System']);
+      mockSystemDocService.getTags.mockResolvedValueOnce(['core', 'rules']);
 
       const store = useSystemStore.getState();
       await store.fetchDocuments(projectId);
@@ -166,7 +168,7 @@ describe('System Document Integration Tests', () => {
       const store = useSystemStore.getState();
       store.setSearchQuery('combat');
 
-      const filtered = useSystemStore.getState().getFilteredDocuments();
+      const filtered = selectFilteredDocuments(useSystemStore.getState());
       expect(filtered.length).toBe(1);
       expect(filtered[0].name).toBe('Combat System');
     });
@@ -175,7 +177,7 @@ describe('System Document Integration Tests', () => {
       const store = useSystemStore.getState();
       store.toggleTag('core');
 
-      const filtered = useSystemStore.getState().getFilteredDocuments();
+      const filtered = selectFilteredDocuments(useSystemStore.getState());
       expect(filtered.length).toBe(2);
       expect(filtered.map(d => d.name)).toContain('Combat System');
       expect(filtered.map(d => d.name)).toContain('UI Guidelines');
@@ -186,7 +188,7 @@ describe('System Document Integration Tests', () => {
       store.toggleTag('core');
       store.toggleTag('combat');
 
-      const filtered = useSystemStore.getState().getFilteredDocuments();
+      const filtered = selectFilteredDocuments(useSystemStore.getState());
       expect(filtered.length).toBe(1);
       expect(filtered[0].name).toBe('Combat System');
     });
@@ -195,7 +197,7 @@ describe('System Document Integration Tests', () => {
       const store = useSystemStore.getState();
       store.setSelectedCategory('Content');
 
-      const filtered = useSystemStore.getState().getFilteredDocuments();
+      const filtered = selectFilteredDocuments(useSystemStore.getState());
       expect(filtered.length).toBe(1);
       expect(filtered[0].name).toBe('Character Design');
     });
@@ -205,7 +207,7 @@ describe('System Document Integration Tests', () => {
       store.setSearchQuery('system');
       store.toggleTag('core');
 
-      const filtered = useSystemStore.getState().getFilteredDocuments();
+      const filtered = selectFilteredDocuments(useSystemStore.getState());
       expect(filtered.length).toBe(1);
       expect(filtered[0].name).toBe('Combat System');
     });
@@ -223,7 +225,7 @@ describe('System Document Integration Tests', () => {
       expect(state.selectedTags).toEqual([]);
       expect(state.selectedCategory).toBeNull();
 
-      const filtered = state.getFilteredDocuments();
+      const filtered = selectFilteredDocuments(state);
       expect(filtered.length).toBe(3);
     });
   });
@@ -282,7 +284,7 @@ describe('System Document Integration Tests', () => {
     it('should toggle category expansion', () => {
       const store = useSystemStore.getState();
 
-      // Initially expanded
+      // Initially collapsed, toggle to expand
       store.toggleCategory('System');
       expect(useSystemStore.getState().expandedCategories).toContain('System');
 
@@ -304,48 +306,47 @@ describe('System Document Integration Tests', () => {
       expect(useSystemStore.getState().isLoading).toBe(false);
     });
 
-    it('should handle create error', async () => {
+    it('should handle create error and update store error state', async () => {
       const errorMessage = 'Validation failed';
       mockSystemDocService.createSystemDocument.mockRejectedValueOnce(new Error(errorMessage));
 
       const store = useSystemStore.getState();
+      await store.createDocument(projectId, {
+        name: 'Test',
+        category: 'System',
+        tags: [],
+        content: '',
+        dependencies: [],
+      });
 
-      await expect(
-        store.createDocument(projectId, {
-          name: 'Test',
-          category: 'System',
-          tags: [],
-          content: '',
-          dependencies: [],
-        })
-      ).rejects.toThrow(errorMessage);
+      expect(useSystemStore.getState().error).toBe(errorMessage);
+      expect(useSystemStore.getState().isLoading).toBe(false);
     });
 
-    it('should handle update error', async () => {
+    it('should handle update error and update store error state', async () => {
       useSystemStore.setState({ documents: [mockDocument] });
 
       const errorMessage = 'Update failed';
       mockSystemDocService.updateSystemDocument.mockRejectedValueOnce(new Error(errorMessage));
 
       const store = useSystemStore.getState();
+      await store.updateDocument(projectId, mockDocument.id, { name: 'Updated' });
 
-      await expect(
-        store.updateDocument(projectId, mockDocument.id, { name: 'Updated' })
-      ).rejects.toThrow(errorMessage);
+      expect(useSystemStore.getState().error).toBe(errorMessage);
+      expect(useSystemStore.getState().isLoading).toBe(false);
     });
 
-    it('should handle delete error', async () => {
+    it('should handle delete error and update store error state', async () => {
       useSystemStore.setState({ documents: [mockDocument] });
 
       const errorMessage = 'Delete failed';
       mockSystemDocService.deleteSystemDocument.mockRejectedValueOnce(new Error(errorMessage));
 
       const store = useSystemStore.getState();
+      await store.deleteDocument(projectId, mockDocument.id);
 
-      await expect(
-        store.deleteDocument(projectId, mockDocument.id)
-      ).rejects.toThrow(errorMessage);
-
+      expect(useSystemStore.getState().error).toBe(errorMessage);
+      expect(useSystemStore.getState().isLoading).toBe(false);
       // Document should still be in store
       expect(useSystemStore.getState().documents).toContainEqual(mockDocument);
     });
