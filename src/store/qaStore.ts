@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Question, QASession, QACategory, QAStore } from '../types/qa';
+import type { Question, QASession, QAStore } from '../types/qa';
 import * as qaService from '../services/qaService';
 
 /**

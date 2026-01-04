@@ -4,7 +4,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 
 ## Project Progress
 
-**Current Progress: 80%**
+**Current Progress: 85%**
 
 ### Completed Features
 
@@ -13,7 +13,8 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Task Management (SPEC-TASK-001)
 - System Document Management (SPEC-SYSTEM-001)
 - Reference System Selection (SPEC-REFERENCE-001)
-- Template System (SPEC-TEMPLATE-001) - In Progress
+- Template System (SPEC-TEMPLATE-001)
+- Q&A System (SPEC-QA-001)
 
 ## Project Context
 
