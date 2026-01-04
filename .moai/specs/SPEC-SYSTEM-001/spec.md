@@ -34,7 +34,7 @@ related_specs:
 
 ### Technical Environment
 
-- **Frontend**: React 18.x, TypeScript 5.x, Tailwind CSS 3.x, Zustand
+- **Frontend**: React 19, TypeScript 5.9, Tailwind CSS 4, Zustand
 - **Backend**: Node.js 20.x LTS, Express 4.x
 - **Storage**: File-based (JSON metadata, Markdown content)
 - **Existing Components**: MarkdownEditor, ConfirmDialog (reusable)
@@ -286,3 +286,4 @@ workspace/projects/{project_id}/
 |---------|------|--------|---------|
 | 1.0.0 | 2026-01-04 | workflow-spec | Initial SPEC creation |
 | 1.1.0 | 2026-01-04 | moai-sync | Implementation completed - all components, store, services, and tests implemented |
+| 1.2.0 | 2026-01-04 | manager-docs | Tech stack version update (React 19, TypeScript 5.9, Tailwind CSS 4) |
