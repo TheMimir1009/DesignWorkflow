@@ -7,6 +7,7 @@ import cors from 'cors';
 import { projectsRouter } from './routes/projects.ts';
 import { tasksRouter, getProjectTasks, createProjectTask } from './routes/tasks.ts';
 import { systemsRouter, getProjectSystems, createProjectSystem } from './routes/systems.ts';
+import { qaRouter, saveTaskQA, getTaskQA, generateDesign } from './routes/qa.ts';
 
 /**
  * Create and configure Express application
@@ -31,6 +32,12 @@ export function createApp(): Express {
   app.use('/api/systems', systemsRouter);
   app.get('/api/projects/:projectId/systems', getProjectSystems);
   app.post('/api/projects/:projectId/systems', createProjectSystem);
+
+  // Q&A routes
+  app.use('/api/questions', qaRouter);
+  app.post('/api/tasks/:taskId/qa', saveTaskQA);
+  app.get('/api/tasks/:taskId/qa', getTaskQA);
+  app.post('/api/tasks/:taskId/generate-design', generateDesign);
 
   return app;
 }

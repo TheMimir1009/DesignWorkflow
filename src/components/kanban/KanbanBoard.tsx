@@ -21,7 +21,9 @@ import { KanbanCard } from './KanbanCard';
 import { useTaskStore } from '../../store/taskStore';
 import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
 import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
+import { QAFormModal } from '../document';
 import type { Task, TaskStatus } from '../../types';
+import type { QACategory } from '../../types/qa';
 
 /**
  * Props for KanbanBoard component
@@ -73,6 +75,11 @@ function ErrorDisplay({ message }: { message: string }) {
  */
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // Q&A Modal state
+  const [isQAModalOpen, setIsQAModalOpen] = useState(false);
+  const [qaTaskId, setQATaskId] = useState<string | null>(null);
+  const [qaCategory, setQACategory] = useState<QACategory>('game_mechanic');
 
   // Store selectors
   const tasks = useTaskStore((state) => state.tasks);
@@ -136,6 +143,26 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     [tasks]
   );
 
+  // Open Q&A modal for a task moving to design
+  const openQAModal = useCallback((taskId: string, category: QACategory = 'game_mechanic') => {
+    setQATaskId(taskId);
+    setQACategory(category);
+    setIsQAModalOpen(true);
+  }, []);
+
+  // Close Q&A modal
+  const closeQAModal = useCallback(() => {
+    setIsQAModalOpen(false);
+    setQATaskId(null);
+  }, []);
+
+  // Handle Q&A completion
+  const handleQAComplete = useCallback(() => {
+    // Refresh tasks after Q&A completion
+    fetchTasks(projectId);
+    closeQAModal();
+  }, [fetchTasks, projectId, closeQAModal]);
+
   // Handle drag end
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -154,6 +181,13 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       // Skip if same status
       if (task.status === targetStatus) return;
 
+      // Check if it's a forward movement from featurelist to design
+      // This triggers the Q&A flow instead of direct AI generation
+      if (task.status === 'featurelist' && targetStatus === 'design') {
+        openQAModal(taskId);
+        return;
+      }
+
       // Check if it's a forward movement (triggers AI)
       const isForward = isForwardMovement(task.status, targetStatus);
 
@@ -165,7 +199,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         await updateTaskStatus(taskId, targetStatus);
       }
     },
-    [tasks, updateTaskStatus, triggerAIGeneration]
+    [tasks, updateTaskStatus, triggerAIGeneration, openQAModal]
   );
 
   // Handle delete confirmation
@@ -234,6 +268,17 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           onClose={closeDeleteConfirm}
           task={selectedTask}
           onConfirm={handleDeleteConfirm}
+        />
+      )}
+
+      {/* Q&A Form Modal */}
+      {qaTaskId && (
+        <QAFormModal
+          isOpen={isQAModalOpen}
+          onClose={closeQAModal}
+          taskId={qaTaskId}
+          onComplete={handleQAComplete}
+          initialCategory={qaCategory}
         />
       )}
     </div>
