@@ -55,6 +55,8 @@ describe('Tasks API', () => {
 
   // Helper to create a test task
   async function createTestTask(projectId: string, overrides: Partial<Task> = {}): Promise<Task> {
+    // Use past timestamp to ensure updatedAt comparison works reliably
+    const pastDate = new Date(Date.now() - 1000).toISOString();
     const task: Task = {
       id: uuidv4(),
       projectId,
@@ -68,8 +70,8 @@ describe('Tasks API', () => {
       qaAnswers: [],
       revisions: [],
       isArchived: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: pastDate,
+      updatedAt: pastDate,
       ...overrides,
     };
 
