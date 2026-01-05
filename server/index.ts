@@ -6,6 +6,7 @@ import express, { type Express } from 'express';
 import cors from 'cors';
 import { projectsRouter } from './routes/projects.ts';
 import { tasksRouter, getProjectTasks, createProjectTask } from './routes/tasks.ts';
+import { systemsRouter, getProjectSystems, createProjectSystem } from './routes/systems.ts';
 
 /**
  * Create and configure Express application
@@ -25,6 +26,11 @@ export function createApp(): Express {
   // Project-scoped task routes
   app.get('/api/projects/:projectId/tasks', getProjectTasks);
   app.post('/api/projects/:projectId/tasks', createProjectTask);
+
+  // System routes
+  app.use('/api/systems', systemsRouter);
+  app.get('/api/projects/:projectId/systems', getProjectSystems);
+  app.post('/api/projects/:projectId/systems', createProjectSystem);
 
   return app;
 }
