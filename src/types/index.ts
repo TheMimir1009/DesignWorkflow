@@ -247,3 +247,83 @@ export interface TaskModalState {
   isDeleteConfirmOpen: boolean;
   selectedTask: Task | null;
 }
+
+// =============================================================================
+// Template System Types (SPEC-TEMPLATE-001)
+// =============================================================================
+
+// Template categories for organizing templates
+export type TemplateCategory = 'qa-questions' | 'document-structure' | 'prompts';
+
+// Template variable input types
+export type TemplateVariableType = 'text' | 'textarea' | 'select' | 'number';
+
+// Template variable definition for dynamic content
+export interface TemplateVariable {
+  name: string;
+  description: string;
+  defaultValue: string | null;
+  required: boolean;
+  type: TemplateVariableType;
+  options: string[] | null; // For select type
+}
+
+// Main Template interface
+export interface Template {
+  id: string;
+  name: string;
+  category: TemplateCategory;
+  description: string;
+  content: string; // JSON string for Q&A, Markdown for documents
+  variables: TemplateVariable[];
+  isDefault: boolean;
+  projectId: string | null; // null = global template
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Template Store State
+export interface TemplateState {
+  templates: Template[];
+  selectedTemplateId: string | null;
+  selectedCategory: TemplateCategory | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// DTOs for API operations
+export interface CreateTemplateDto {
+  name: string;
+  category: TemplateCategory;
+  description?: string;
+  content?: string;
+  variables?: TemplateVariable[];
+  isDefault?: boolean;
+  projectId?: string | null;
+}
+
+export interface UpdateTemplateDto {
+  name?: string;
+  category?: TemplateCategory;
+  description?: string;
+  content?: string;
+  variables?: TemplateVariable[];
+  isDefault?: boolean;
+}
+
+// Template application context for applying templates
+export interface TemplateApplicationContext {
+  templateId: string;
+  variableValues: Record<string, string>;
+  targetType: 'qa-form' | 'document' | 'prompt';
+}
+
+// Request/Response types for template application API
+export interface ApplyTemplateRequest {
+  variableValues: Record<string, string>;
+}
+
+export interface ApplyTemplateResponse {
+  content: string;
+  appliedVariables: Record<string, string>;
+}
