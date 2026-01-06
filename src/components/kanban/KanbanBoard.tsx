@@ -95,6 +95,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const isEditModalOpen = useTaskStore((state) => state.isEditModalOpen);
   const isDeleteConfirmOpen = useTaskStore((state) => state.isDeleteConfirmOpen);
   const selectedTask = useTaskStore((state) => state.selectedTask);
+  const openCreateModal = useTaskStore((state) => state.openCreateModal);
   const closeCreateModal = useTaskStore((state) => state.closeCreateModal);
   const closeEditModal = useTaskStore((state) => state.closeEditModal);
   const closeDeleteConfirm = useTaskStore((state) => state.closeDeleteConfirm);
@@ -221,6 +222,20 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
 
   return (
     <div data-testid="kanban-board" className="p-4">
+      {/* Header with New Task Button */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-semibold text-gray-100">Kanban Board</h1>
+        <button
+          onClick={openCreateModal}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          New Task
+        </button>
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
