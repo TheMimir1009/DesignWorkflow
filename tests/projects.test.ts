@@ -419,6 +419,52 @@ describe('Projects API', () => {
       expect(body.success).toBe(false);
       expect(body.error).toContain('duplicate');
     });
+
+    it('should update defaultReferences array', async () => {
+      // Create a project first
+      const createResponse = await request(app)
+        .post('/api/projects')
+        .send({ name: 'Project With References', defaultReferences: [] })
+        .expect(201);
+
+      const createdProject = (createResponse.body as ApiResponse<Project>).data!;
+
+      // Update defaultReferences
+      const response = await request(app)
+        .put(`/api/projects/${createdProject.id}`)
+        .send({ defaultReferences: ['system-1', 'system-2', 'system-3'] })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      const body = response.body as ApiResponse<Project>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.defaultReferences).toEqual(['system-1', 'system-2', 'system-3']);
+      expect(body.data!.name).toBe('Project With References');
+    });
+
+    it('should clear defaultReferences when empty array provided', async () => {
+      // Create a project with defaultReferences
+      const createResponse = await request(app)
+        .post('/api/projects')
+        .send({ name: 'Project To Clear References', defaultReferences: ['system-1'] })
+        .expect(201);
+
+      const createdProject = (createResponse.body as ApiResponse<Project>).data!;
+      expect(createdProject.defaultReferences).toEqual(['system-1']);
+
+      // Clear defaultReferences
+      const response = await request(app)
+        .put(`/api/projects/${createdProject.id}`)
+        .send({ defaultReferences: [] })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      const body = response.body as ApiResponse<Project>;
+
+      expect(body.success).toBe(true);
+      expect(body.data!.defaultReferences).toEqual([]);
+    });
   });
 
   describe('DELETE /api/projects/:id - Delete Project', () => {
