@@ -327,3 +327,76 @@ export interface ApplyTemplateResponse {
   content: string;
   appliedVariables: Record<string, string>;
 }
+
+// =============================================================================
+// Authentication Types (SPEC-AUTH-001)
+// =============================================================================
+
+/**
+ * User role in the system
+ */
+export type UserRole = 'admin' | 'user';
+
+/**
+ * Project access role
+ */
+export type ProjectRole = 'owner' | 'editor' | 'viewer';
+
+/**
+ * User without sensitive data
+ */
+export interface SafeUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Authentication state
+ */
+export interface AuthState {
+  user: SafeUser | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Registration DTO
+ */
+export interface RegisterDto {
+  email: string;
+  password: string;
+  name: string;
+}
+
+/**
+ * Login DTO
+ */
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+/**
+ * Login response
+ */
+export interface LoginResponse {
+  user: SafeUser;
+  token: string;
+}
+
+/**
+ * Project access entry
+ */
+export interface ProjectAccess {
+  userId: string;
+  projectId: string;
+  role: ProjectRole;
+  grantedBy: string;
+  grantedAt: string;
+}

@@ -8,6 +8,9 @@ import { projectsRouter } from './routes/projects.ts';
 import { tasksRouter, getProjectTasks, createProjectTask } from './routes/tasks.ts';
 import { systemsRouter, getProjectSystems, createProjectSystem } from './routes/systems.ts';
 import { qaRouter, saveTaskQA, getTaskQA, generateDesign } from './routes/qa.ts';
+import { authRouter } from './routes/auth.ts';
+import { usersRouter } from './routes/users.ts';
+import { projectAccessRouter } from './routes/projectAccess.ts';
 
 /**
  * Create and configure Express application
@@ -21,12 +24,17 @@ export function createApp(): Express {
   app.use(express.json());
 
   // Routes
+  app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
   app.use('/api/projects', projectsRouter);
   app.use('/api/tasks', tasksRouter);
 
   // Project-scoped task routes
   app.get('/api/projects/:projectId/tasks', getProjectTasks);
   app.post('/api/projects/:projectId/tasks', createProjectTask);
+
+  // Project access routes
+  app.use('/api/projects/:projectId/access', projectAccessRouter);
 
   // System routes
   app.use('/api/systems', systemsRouter);
