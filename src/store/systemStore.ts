@@ -48,6 +48,9 @@ export interface SystemStoreActions {
   getSystemsByCategory: () => Record<string, SystemDocument[]>;
   // Error handling
   clearError: () => void;
+  // Test utility methods
+  clearDocuments: () => void;
+  clearFilters: () => void;
   // Modal actions
   openCreateModal: () => void;
   closeCreateModal: () => void;
@@ -244,6 +247,15 @@ export const useSystemStore = create<SystemStore>()(
       // Error handling
       clearError: () => {
         set({ error: null }, false, 'clearError');
+      },
+
+      // Test utility methods
+      clearDocuments: () => {
+        set({ systems: [] }, false, 'clearDocuments');
+      },
+
+      clearFilters: () => {
+        set({ searchQuery: '', tagFilter: [], categoryFilter: null }, false, 'clearFilters');
       },
 
       // Modal actions
