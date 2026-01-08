@@ -19,6 +19,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Document Editing Pipeline (SPEC-DOCUMENT-001)
 - Archive Feature (SPEC-ARCHIVE-001)
 - Claude Code Integration (SPEC-CLAUDE-001)
+- Dashboard and Analytics (SPEC-DASHBOARD-001)
 
 ## Project Context
 
