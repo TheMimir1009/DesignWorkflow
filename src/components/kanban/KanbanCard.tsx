@@ -16,6 +16,8 @@ export interface KanbanCardProps {
   isDragging?: boolean;
   /** Whether AI is currently generating content for this task */
   isGenerating?: boolean;
+  /** Callback when archive button is clicked (only for prototype tasks) */
+  onArchive?: (taskId: string) => void;
 }
 
 /**
@@ -121,9 +123,43 @@ function GeneratingIndicator() {
 }
 
 /**
+ * Archive button component for prototype tasks
+ */
+function ArchiveButton({ onClick }: { onClick: () => void }) {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick();
+  };
+
+  return (
+    <button
+      type="button"
+      data-testid="archive-button"
+      title="Archive task"
+      onClick={handleClick}
+      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-amber-500 rounded hover:bg-gray-100 transition-colors"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+        />
+      </svg>
+    </button>
+  );
+}
+
+/**
  * KanbanCard - Draggable task card for Kanban board
  */
-export function KanbanCard({ task, isDragging = false, isGenerating = false }: KanbanCardProps) {
+export function KanbanCard({
+  task,
+  isDragging = false,
+  isGenerating = false,
+  onArchive,
+}: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -158,6 +194,11 @@ export function KanbanCard({ task, isDragging = false, isGenerating = false }: K
         ${isGenerating ? 'animate-pulse' : ''}
       `}
     >
+      {/* Archive Button (only for prototype tasks) */}
+      {task.status === 'prototype' && onArchive && (
+        <ArchiveButton onClick={() => onArchive(task.id)} />
+      )}
+
       {/* Generating Indicator */}
       {isGenerating && <GeneratingIndicator />}
 

@@ -124,6 +124,15 @@ export interface Archive {
   archivedAt: string;
 }
 
+// Archive Store State
+export interface ArchiveState {
+  archives: Archive[];
+  selectedArchiveId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  searchQuery: string;
+}
+
 // Question template for Q&A system
 export interface QuestionTemplate {
   id: string;
