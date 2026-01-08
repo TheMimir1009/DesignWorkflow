@@ -24,6 +24,7 @@ import {
   deleteProjectArchive,
 } from './routes/archives.ts';
 import { analyticsRouter } from './routes/analytics.ts';
+import { discoverProjectSystems } from './routes/discovery.ts';
 
 /**
  * Create and configure Express application
@@ -81,6 +82,9 @@ export function createApp(): Express {
 
   // Analytics routes
   app.use('/api/projects/:projectId/analytics', analyticsRouter);
+
+  // Discovery routes (Auto-exploration)
+  app.post('/api/projects/:projectId/discover', discoverProjectSystems);
 
   return app;
 }
