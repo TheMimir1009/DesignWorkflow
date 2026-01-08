@@ -409,3 +409,56 @@ export interface ProjectAccess {
   grantedBy: string;
   grantedAt: string;
 }
+
+// =============================================================================
+// Dashboard Types (SPEC-DASHBOARD-001)
+// =============================================================================
+
+/**
+ * Task counts by status for dashboard
+ */
+export interface TasksByStatus {
+  featurelist: number;
+  design: number;
+  prd: number;
+  prototype: number;
+}
+
+/**
+ * Dashboard summary data
+ */
+export interface DashboardSummary {
+  projectId: string;
+  totalTasks: number;
+  tasksByStatus: TasksByStatus;
+  completionRate: number;
+  archivedCount: number;
+  documentsGenerated: number;
+  lastUpdated: string;
+}
+
+/**
+ * Timeline data point for charts
+ */
+export interface TimelineDataPoint {
+  date: string;
+  tasksCreated: number;
+  tasksCompleted: number;
+  documentsGenerated: number;
+}
+
+/**
+ * Period filter for timeline
+ */
+export type PeriodFilter = 'daily' | 'weekly' | 'monthly';
+
+/**
+ * Dashboard state for Zustand store
+ */
+export interface DashboardState {
+  summary: DashboardSummary | null;
+  timeline: TimelineDataPoint[];
+  periodFilter: PeriodFilter;
+  isLoading: boolean;
+  error: string | null;
+}

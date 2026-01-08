@@ -23,6 +23,7 @@ import {
   restoreArchivedTask,
   deleteProjectArchive,
 } from './routes/archives.ts';
+import { analyticsRouter } from './routes/analytics.ts';
 
 /**
  * Create and configure Express application
@@ -77,6 +78,9 @@ export function createApp(): Express {
 
   // Question Library routes (separate from Q&A questions)
   app.use('/api/question-library', questionsRouter);
+
+  // Analytics routes
+  app.use('/api/projects/:projectId/analytics', analyticsRouter);
 
   return app;
 }
