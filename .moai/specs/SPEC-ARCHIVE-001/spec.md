@@ -1,7 +1,7 @@
 ---
 id: SPEC-ARCHIVE-001
-version: "1.0.0"
-status: "draft"
+version: "1.1.0"
+status: "completed"
 created: "2026-01-08"
 updated: "2026-01-08"
 author: "MoAI-ADK"
@@ -15,6 +15,7 @@ priority: "high"
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|-----------|
 | 1.0.0 | 2026-01-08 | MoAI-ADK | 초기 SPEC 작성 |
+| 1.1.0 | 2026-01-08 | MoAI-ADK | TDD 구현 완료 - status: completed |
 
 ---
 

@@ -17,6 +17,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Q&A System (SPEC-QA-001)
 - Multi-User Authentication (SPEC-AUTH-001)
 - Document Editing Pipeline (SPEC-DOCUMENT-001)
+- Archive Feature (SPEC-ARCHIVE-001)
 
 ## Project Context
 
