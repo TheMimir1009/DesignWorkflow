@@ -21,6 +21,8 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Claude Code Integration (SPEC-CLAUDE-001)
 - Dashboard and Analytics (SPEC-DASHBOARD-001)
 - Relevant Systems Auto-Discovery (SPEC-AUTODISCOVERY-001)
+- Completed Task Document API (SPEC-DOCREF-001)
+- Document Reference Panel UI (SPEC-DOCREF-002)
 
 ## Project Context
 
