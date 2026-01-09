@@ -8,7 +8,6 @@
  */
 import type {
   Task,
-  Archive,
   CompletedDocumentSummary,
   CompletedDocumentDetail,
   CompletedDocumentsQueryOptions,

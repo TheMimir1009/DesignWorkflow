@@ -10,9 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   discoveryService,
   discoverRelatedSystems,
-  type RecommendedSystem,
   type DiscoveryResult,
-  type DiscoverRelatedSystemsRequest,
   DiscoveryServiceError,
 } from '../discoveryService';
 

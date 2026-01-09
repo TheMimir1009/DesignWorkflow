@@ -16,8 +16,6 @@ import {
   getTasksByProject,
   saveProjectTasks,
 } from '../utils/taskStorage.ts';
-import type { Task } from '../../src/types/index.ts';
-
 export const archivesRouter = Router();
 
 /**

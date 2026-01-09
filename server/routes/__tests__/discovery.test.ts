@@ -30,7 +30,7 @@ vi.mock('../../utils/systemStorage.ts', () => ({
 }));
 
 // Import after mocking
-import { discoveryRouter, discoverProjectSystems } from '../discovery.ts';
+import { discoverProjectSystems } from '../discovery.ts';
 import { extractKeywords } from '../../utils/keywordExtractor.ts';
 import { matchSystemsByKeywords } from '../../utils/systemMatcher.ts';
 import { getProjectById } from '../../utils/projectStorage.ts';

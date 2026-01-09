@@ -8,7 +8,7 @@ import {
   calculateTimeline,
   aggregateByPeriod,
 } from '../analyticsStorage.ts';
-import type { Task, Archive, DashboardSummary, TimelineDataPoint } from '../../../src/types/index.ts';
+import type { Task, Archive } from '../../../src/types/index.ts';
 
 // Mock taskStorage and archiveStorage
 vi.mock('../taskStorage.ts', () => ({

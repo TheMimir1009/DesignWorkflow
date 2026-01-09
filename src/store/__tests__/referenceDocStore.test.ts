@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useReferenceDocStore, type DocumentTypeFilter } from '../referenceDocStore';
+import { useReferenceDocStore } from '../referenceDocStore';
 import * as referenceDocService from '../../services/referenceDocService';
 import type { CompletedDocumentSummary, CompletedDocumentDetail } from '../../types';
 

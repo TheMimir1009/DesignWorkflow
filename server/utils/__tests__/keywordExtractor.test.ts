@@ -9,10 +9,7 @@
  * - Tag normalization (lowercase, special char removal, deduplication)
  */
 import { describe, it, expect } from 'vitest';
-import {
-  extractKeywords,
-  type ExtractedKeyword,
-} from '../keywordExtractor.ts';
+import { extractKeywords } from '../keywordExtractor.ts';
 
 describe('keywordExtractor', () => {
   describe('extractKeywords - Basic Input Handling', () => {

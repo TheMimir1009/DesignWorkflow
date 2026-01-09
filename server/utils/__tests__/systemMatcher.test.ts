@@ -8,10 +8,7 @@
  * - TASK-001: Result sorting and limiting
  */
 import { describe, it, expect } from 'vitest';
-import {
-  matchSystemsByKeywords,
-  type SystemMatchResult,
-} from '../systemMatcher.ts';
+import { matchSystemsByKeywords } from '../systemMatcher.ts';
 import type { ExtractedKeyword } from '../keywordExtractor.ts';
 import type { SystemDocument } from '../../../src/types/index.ts';
 

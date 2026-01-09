@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { DashboardSummary, TimelineDataPoint, PeriodFilter, DashboardState } from '../types';
+import type { PeriodFilter, DashboardState } from '../types';
 import * as dashboardService from '../services/dashboardService';
 
 /**

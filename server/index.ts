@@ -16,7 +16,6 @@ import { qaSessionsRouter } from './routes/qa-sessions.ts';
 import { templatesRouter } from './routes/templates.ts';
 import { questionsRouter } from './routes/questions.ts';
 import {
-  archivesRouter,
   getProjectArchives,
   getProjectArchive,
   archiveTask,
@@ -25,6 +24,7 @@ import {
 } from './routes/archives.ts';
 import { analyticsRouter } from './routes/analytics.ts';
 import { discoverProjectSystems } from './routes/discovery.ts';
+import { llmSettingsRouter } from './routes/llmSettings.ts';
 import {
   getProjectCompletedDocuments,
   getProjectCompletedDocument,
@@ -93,6 +93,9 @@ export function createApp(): Express {
   // Completed Documents routes (SPEC-DOCREF-001)
   app.get('/api/projects/:projectId/completed-documents', getProjectCompletedDocuments);
   app.get('/api/projects/:projectId/completed-documents/:taskId', getProjectCompletedDocument);
+
+  // LLM Settings routes (SPEC-LLM-001)
+  app.use('/api/projects', llmSettingsRouter);
 
   return app;
 }
