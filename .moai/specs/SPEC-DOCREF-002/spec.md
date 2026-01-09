@@ -1,6 +1,6 @@
 ---
 id: SPEC-DOCREF-002
-version: "1.0.0"
+version: "1.1.0"
 status: "completed"
 created: "2026-01-09"
 updated: "2026-01-09"
@@ -15,6 +15,7 @@ priority: "HIGH"
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|----------|
 | 1.0.0 | 2026-01-09 | AI Workflow Team | 초안 작성 |
+| 1.1.0 | 2026-01-09 | AI Workflow Team | REQ-007 나란히 보기 기능 구현 완료 |
 
 ---
 
