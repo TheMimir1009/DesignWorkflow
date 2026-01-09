@@ -12,6 +12,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { MarkdownEditor } from '../common/MarkdownEditor';
 import { DocumentPreview } from './DocumentPreview';
+import { ReferenceDocButton, DocumentReferenceSidePanel } from '../reference';
 
 /**
  * Editor mode type
@@ -134,8 +135,10 @@ export function DocumentEditor({
           </button>
         </div>
 
-        {/* Action buttons */}
+        {/* Reference Doc Button and Action buttons */}
         <div className="flex items-center gap-2">
+          <ReferenceDocButton />
+          <div className="w-px h-6 bg-gray-300" />
           {isLoading && (
             <div
               data-testid="loading-spinner"
@@ -195,6 +198,9 @@ export function DocumentEditor({
           </div>
         </div>
       </div>
+
+      {/* Document Reference Side Panel */}
+      <DocumentReferenceSidePanel />
     </div>
   );
 }
