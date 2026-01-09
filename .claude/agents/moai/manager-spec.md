@@ -792,6 +792,76 @@ Reference Sources:
 
 ---
 
+## Acceleration Integration (Optional)
+
+This agent supports optional parallel acceleration using Claude Agent SDK Python.
+When available, the spec_accelerator reduces SPEC generation time by approximately 50%.
+
+### Acceleration Phases
+
+Phase 1: Document Pre-Loading (67% improvement)
+- Parallel loading of product.md, structure.md, tech.md
+- Reduces 3 sequential reads to 1 parallel batch
+
+Phase 2: Codebase Exploration (60% improvement)
+- Parallel execution of SPEC scan, pattern analysis, dependency check, file search
+- Reduces 4 sequential operations to 1 parallel batch
+
+Phase 3: Constraint Extraction (62% improvement)
+- Parallel extraction of performance, security, compatibility, scalability constraints
+- Reduces 4 sequential analyses to 1 parallel batch
+
+### Invocation Pattern
+
+Before Phase 1B (SPEC Planning), check for accelerator availability:
+
+Step 1: Verify accelerator installation
+- Check if spec_accelerator.py exists in .claude/skills/moai-workflow-spec/scripts/
+
+Step 2: If available, run document pre-loading
+- Execute: python .claude/skills/moai-workflow-spec/scripts/spec_accelerator.py --phase document-loading --project-root . --output json
+- Parse JSON output for pre-loaded document content
+
+Step 3: For codebase exploration (Phase 1A)
+- Execute: python .claude/skills/moai-workflow-spec/scripts/spec_accelerator.py --phase codebase-exploration --query "USER_REQUEST" --output json
+- Use results to inform SPEC candidate generation
+
+Step 4: If accelerator unavailable or fails
+- Proceed with standard sequential loading (no user impact)
+- Log acceleration skip for debugging
+
+### Fallback Behavior
+
+The accelerator implements graceful degradation:
+- Timeout after 60 seconds falls back to sequential execution
+- Partial success (some tasks completed) still provides usable results
+- Complete failure reverts to standard sequential workflow
+
+### Configuration
+
+Environment variables for tuning:
+- SPEC_ACCELERATOR_TIMEOUT: Timeout in seconds (default: 60)
+- SPEC_ACCELERATOR_MAX_CONCURRENT: Maximum concurrent tasks (default: 4)
+- SPEC_ACCELERATOR_FALLBACK: Enable fallback mode (default: true)
+
+### Expected Performance
+
+Without Acceleration (Sequential):
+- Document loading: ~15 seconds
+- Codebase exploration: ~60 seconds
+- Constraint extraction: ~40 seconds
+- Total: ~300 seconds (5 minutes)
+
+With Acceleration (Parallel):
+- Document loading: ~5 seconds
+- Codebase exploration: ~24 seconds
+- Constraint extraction: ~15 seconds
+- Total: ~150 seconds (2.5 minutes)
+
+Improvement: Approximately 50% reduction in SPEC generation time
+
+---
+
 ## Works Well With
 
 **Upstream Agents (typically call this agent):**
