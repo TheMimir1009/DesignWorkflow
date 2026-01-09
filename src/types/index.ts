@@ -462,3 +462,55 @@ export interface DashboardState {
   isLoading: boolean;
   error: string | null;
 }
+
+// =============================================================================
+// Completed Document Types (SPEC-DOCREF-001)
+// =============================================================================
+
+/**
+ * Summary view of a completed document (prototype or archived task)
+ * Used in list endpoint responses
+ */
+export interface CompletedDocumentSummary {
+  taskId: string;
+  title: string;
+  status: 'prototype' | 'archived';
+  references: string[];
+  hasDesignDoc: boolean;
+  hasPrd: boolean;
+  hasPrototype: boolean;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+}
+
+/**
+ * Full detail view of a completed document
+ * Used in single document endpoint response
+ */
+export interface CompletedDocumentDetail {
+  taskId: string;
+  title: string;
+  status: 'prototype' | 'archived';
+  references: string[];
+  featureList: string;
+  designDocument: string | null;
+  prd: string | null;
+  prototype: string | null;
+  qaAnswers: QAAnswer[];
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+}
+
+/**
+ * Query options for filtering completed documents
+ */
+export interface CompletedDocumentsQueryOptions {
+  search?: string;
+  documentType?: string[];
+  reference?: string[];
+  includeArchived?: boolean;
+  limit?: number;
+  offset?: number;
+}
