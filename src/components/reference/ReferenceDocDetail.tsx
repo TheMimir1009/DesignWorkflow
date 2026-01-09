@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import type { CompletedDocumentDetail } from '../../types';
 import { DocumentPreview } from '../document/DocumentPreview';
+import { useReferenceDocStore } from '../../store/referenceDocStore';
 
 /**
  * Props for ReferenceDocDetail
@@ -48,6 +49,13 @@ function formatDate(dateString: string): string {
  */
 export function ReferenceDocDetail({ document, onBack }: ReferenceDocDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('featureList');
+  const openSideBySide = useReferenceDocStore((state) => state.openSideBySide);
+  const selectDocument = useReferenceDocStore((state) => state.selectDocument);
+
+  const handleSideBySide = () => {
+    selectDocument(document);
+    openSideBySide();
+  };
 
   // Get content for current tab
   const getContent = (tab: TabType): string | null => {
@@ -83,23 +91,42 @@ export function ReferenceDocDetail({ document, onBack }: ReferenceDocDetailProps
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        {/* Back button */}
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1 mb-3 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          aria-label="목록으로 돌아가기"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          뒤로
-        </button>
+        {/* Header with back and side-by-side buttons */}
+        <div className="flex items-center justify-between mb-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            aria-label="목록으로 돌아가기"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            뒤로
+          </button>
+          <button
+            type="button"
+            onClick={handleSideBySide}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+            aria-label="나란히 보기"
+            data-testid="side-by-side-button"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+              />
+            </svg>
+            나란히 보기
+          </button>
+        </div>
 
         {/* Title and status */}
         <div className="flex items-start justify-between gap-2 mb-2">

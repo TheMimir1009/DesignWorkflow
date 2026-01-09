@@ -77,6 +77,8 @@ describe('referenceDocStore', () => {
       expect(result.current.filters).toEqual([]);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
+      expect(result.current.isSideBySideOpen).toBe(false);
+      expect(result.current.splitRatio).toBe(50);
     });
   });
 
@@ -342,6 +344,8 @@ describe('referenceDocStore', () => {
         result.current.setSearchQuery('test');
         result.current.toggleFilter('design');
         result.current.setError('error');
+        result.current.openSideBySide();
+        result.current.setSplitRatio(70);
         result.current.reset();
       });
 
@@ -352,6 +356,65 @@ describe('referenceDocStore', () => {
       expect(result.current.filters).toEqual([]);
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
+      expect(result.current.isSideBySideOpen).toBe(false);
+      expect(result.current.splitRatio).toBe(50);
+    });
+  });
+
+  describe('openSideBySide / closeSideBySide', () => {
+    it('should open side-by-side view and close panel', () => {
+      const { result } = renderHook(() => useReferenceDocStore());
+
+      act(() => {
+        result.current.openPanel();
+        result.current.openSideBySide();
+      });
+
+      expect(result.current.isSideBySideOpen).toBe(true);
+      expect(result.current.isPanelOpen).toBe(false);
+    });
+
+    it('should close side-by-side view', () => {
+      const { result } = renderHook(() => useReferenceDocStore());
+
+      act(() => {
+        result.current.openSideBySide();
+        result.current.closeSideBySide();
+      });
+
+      expect(result.current.isSideBySideOpen).toBe(false);
+    });
+  });
+
+  describe('setSplitRatio', () => {
+    it('should set split ratio', () => {
+      const { result } = renderHook(() => useReferenceDocStore());
+
+      act(() => {
+        result.current.setSplitRatio(60);
+      });
+
+      expect(result.current.splitRatio).toBe(60);
+    });
+
+    it('should clamp split ratio to minimum 20', () => {
+      const { result } = renderHook(() => useReferenceDocStore());
+
+      act(() => {
+        result.current.setSplitRatio(10);
+      });
+
+      expect(result.current.splitRatio).toBe(20);
+    });
+
+    it('should clamp split ratio to maximum 80', () => {
+      const { result } = renderHook(() => useReferenceDocStore());
+
+      act(() => {
+        result.current.setSplitRatio(90);
+      });
+
+      expect(result.current.splitRatio).toBe(80);
     });
   });
 });

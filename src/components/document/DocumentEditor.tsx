@@ -12,7 +12,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { MarkdownEditor } from '../common/MarkdownEditor';
 import { DocumentPreview } from './DocumentPreview';
-import { ReferenceDocButton, DocumentReferenceSidePanel } from '../reference';
+import { ReferenceDocButton, DocumentReferenceSidePanel, SideBySideView } from '../reference';
 
 /**
  * Editor mode type
@@ -201,6 +201,9 @@ export function DocumentEditor({
 
       {/* Document Reference Side Panel */}
       <DocumentReferenceSidePanel />
+
+      {/* Side-by-side View (REQ-007) */}
+      <SideBySideView currentContent={localContent} />
     </div>
   );
 }

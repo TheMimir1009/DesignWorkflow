@@ -30,6 +30,10 @@ export interface ReferenceDocState {
   isLoading: boolean;
   /** Error message */
   error: string | null;
+  /** Whether side-by-side view is active */
+  isSideBySideOpen: boolean;
+  /** Split ratio for side-by-side view (0-100, percentage for left panel) */
+  splitRatio: number;
 }
 
 /**
@@ -60,6 +64,12 @@ export interface ReferenceDocActions {
   clearError: () => void;
   /** Reset store to initial state */
   reset: () => void;
+  /** Open side-by-side view */
+  openSideBySide: () => void;
+  /** Close side-by-side view */
+  closeSideBySide: () => void;
+  /** Set split ratio for side-by-side view */
+  setSplitRatio: (ratio: number) => void;
 }
 
 /**
@@ -78,6 +88,8 @@ const initialState: ReferenceDocState = {
   filters: [],
   isLoading: false,
   error: null,
+  isSideBySideOpen: false,
+  splitRatio: 50,
 };
 
 /**
@@ -207,6 +219,19 @@ export const useReferenceDocStore = create<ReferenceDocStore>()(
 
       reset: () => {
         set(initialState, false, 'reset');
+      },
+
+      openSideBySide: () => {
+        set({ isSideBySideOpen: true, isPanelOpen: false }, false, 'openSideBySide');
+      },
+
+      closeSideBySide: () => {
+        set({ isSideBySideOpen: false }, false, 'closeSideBySide');
+      },
+
+      setSplitRatio: (ratio: number) => {
+        const clampedRatio = Math.max(20, Math.min(80, ratio));
+        set({ splitRatio: clampedRatio }, false, 'setSplitRatio');
       },
     }),
     { name: 'ReferenceDocStore' }
