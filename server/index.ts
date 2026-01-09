@@ -25,6 +25,10 @@ import {
 } from './routes/archives.ts';
 import { analyticsRouter } from './routes/analytics.ts';
 import { discoverProjectSystems } from './routes/discovery.ts';
+import {
+  getProjectCompletedDocuments,
+  getProjectCompletedDocument,
+} from './routes/completedDocuments.ts';
 
 /**
  * Create and configure Express application
@@ -85,6 +89,10 @@ export function createApp(): Express {
 
   // Discovery routes (Auto-exploration)
   app.post('/api/projects/:projectId/discover', discoverProjectSystems);
+
+  // Completed Documents routes (SPEC-DOCREF-001)
+  app.get('/api/projects/:projectId/completed-documents', getProjectCompletedDocuments);
+  app.get('/api/projects/:projectId/completed-documents/:taskId', getProjectCompletedDocument);
 
   return app;
 }
