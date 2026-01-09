@@ -5,12 +5,25 @@
 import { Router, type Request, type Response } from 'express';
 import { sendSuccess, sendError } from '../utils/response.ts';
 import {
-  loadQuestionTemplates,
-  loadCategories,
-  getQuestionsByCategory,
-} from '../utils/qaStorage.ts';
+  loadAllTemplates,
+  getAvailableCategories,
+  loadQuestionTemplate,
+} from '../utils/questionLoader.ts';
+import type { QACategory } from '../../src/types/qa.ts';
 
 export const questionsRouter = Router();
+
+/**
+ * Valid Q&A categories
+ */
+const VALID_CATEGORIES: QACategory[] = ['game_mechanic', 'economy', 'growth'];
+
+/**
+ * Check if a category is valid
+ */
+function isValidCategory(category: string): category is QACategory {
+  return VALID_CATEGORIES.includes(category as QACategory);
+}
 
 /**
  * GET /api/questions - Get all questions
@@ -21,7 +34,9 @@ export const questionsRouter = Router();
  */
 questionsRouter.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const questions = await loadQuestionTemplates();
+    const templates = await loadAllTemplates();
+    // Flatten all questions from all templates
+    const questions = templates.flatMap((t) => t.questions);
     sendSuccess(res, questions);
   } catch (error) {
     console.error('Error getting questions:', error);
@@ -32,13 +47,13 @@ questionsRouter.get('/', async (_req: Request, res: Response): Promise<void> => 
 /**
  * GET /api/questions/categories - Get all categories
  *
- * Response: ApiResponse<QACategory[]>
+ * Response: ApiResponse<CategoryDefinition[]>
  * - 200: List of all categories
  * - 500: Server error
  */
-questionsRouter.get('/categories', async (_req: Request, res: Response): Promise<void> => {
+questionsRouter.get('/categories', (_req: Request, res: Response): void => {
   try {
-    const categories = await loadCategories();
+    const categories = getAvailableCategories();
     sendSuccess(res, categories);
   } catch (error) {
     console.error('Error getting categories:', error);
@@ -50,17 +65,25 @@ questionsRouter.get('/categories', async (_req: Request, res: Response): Promise
  * GET /api/questions/:categoryId - Get questions by category
  *
  * Path Parameters:
- * - categoryId: Category ID
+ * - categoryId: Category ID (game_mechanic, economy, growth)
  *
  * Response: ApiResponse<Question[]>
  * - 200: List of questions for the category
+ * - 200: Empty array for invalid category
  * - 500: Server error
  */
 questionsRouter.get('/:categoryId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { categoryId } = req.params;
-    const questions = await getQuestionsByCategory(categoryId);
-    sendSuccess(res, questions);
+
+    // Return empty array for invalid categories
+    if (!isValidCategory(categoryId)) {
+      sendSuccess(res, []);
+      return;
+    }
+
+    const template = await loadQuestionTemplate(categoryId);
+    sendSuccess(res, template.questions);
   } catch (error) {
     console.error('Error getting questions by category:', error);
     sendError(res, 500, 'Failed to get questions by category');

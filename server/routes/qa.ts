@@ -14,6 +14,8 @@ import {
   createQASession,
 } from '../utils/qaStorage.ts';
 import { getTaskById, updateTask } from '../utils/taskStorage.ts';
+import { callClaudeCode, ClaudeCodeTimeoutError } from '../utils/claudeCodeRunner.ts';
+import { buildDesignDocumentPrompt, type QAResponse } from '../utils/promptBuilder.ts';
 import type { QACategory, QASessionAnswer } from '../../src/types/qa.ts';
 
 export const qaRouter = Router();
@@ -38,6 +40,24 @@ function isValidCategory(category: string): category is QACategory {
  * - 500: Server error
  */
 qaRouter.get('/', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const categories = getAvailableCategories();
+    sendSuccess(res, categories);
+  } catch (error) {
+    console.error('Error getting categories:', error);
+    sendError(res, 500, 'Failed to get categories');
+  }
+});
+
+/**
+ * GET /api/questions/categories - Get all available categories
+ * (Alias for backward compatibility)
+ *
+ * Response: ApiResponse<CategoryDefinition[]>
+ * - 200: List of available categories
+ * - 500: Server error
+ */
+qaRouter.get('/categories', async (_req: Request, res: Response): Promise<void> => {
   try {
     const categories = getAvailableCategories();
     sendSuccess(res, categories);
@@ -222,12 +242,53 @@ export async function generateDesign(req: Request, res: Response): Promise<void>
     // Get Q&A session for context
     const session = await getQASessionByTaskId(taskId);
 
-    // Generate mock design document based on Q&A answers
-    const qaContext = session?.answers
-      .map((a) => `Q: ${a.questionId}\nA: ${a.answer}`)
-      .join('\n\n') || 'No Q&A context available';
+    // Convert session answers to QAResponse format for prompt builder
+    const qaResponses: QAResponse[] = session?.answers.map((a) => ({
+      question: a.questionId,
+      answer: a.answer,
+    })) || [];
 
-    const designDocument = generateMockDesignDocument(task.title, task.featureList, qaContext);
+    // Build the AI prompt with task context
+    const basePrompt = buildDesignDocumentPrompt(qaResponses);
+    const fullPrompt = `
+## Task Information
+- Title: ${task.title}
+- Feature List: ${task.featureList || 'Not specified'}
+
+${basePrompt}
+
+## Additional Instructions
+- Write the design document in Korean (한국어)
+- Focus on practical implementation details
+- Include specific technical recommendations based on the Q&A responses
+`;
+
+    // Generate design document using Claude Code AI
+    console.log(`[AI Generation] Starting Design Document generation for task: ${taskId}`);
+
+    const result = await callClaudeCode(
+      fullPrompt,
+      process.cwd(),
+      { timeout: 600000, allowedTools: ['Read', 'Grep'] }  // 10분 타임아웃
+    );
+
+    // Extract the generated content
+    let designDocument: string;
+    if (result.output && typeof result.output === 'object' && 'result' in result.output) {
+      designDocument = (result.output as { result: string }).result;
+    } else if (result.rawOutput) {
+      // Try to parse JSON and extract result
+      try {
+        const parsed = JSON.parse(result.rawOutput);
+        designDocument = parsed.result || result.rawOutput;
+      } catch {
+        designDocument = result.rawOutput;
+      }
+    } else {
+      throw new Error('No content generated from Claude Code');
+    }
+
+    console.log(`[AI Generation] Design Document generated successfully for task: ${taskId}`);
 
     // Update task with design document and status
     const updatedTask = await updateTask(taskId, {
@@ -243,47 +304,19 @@ export async function generateDesign(req: Request, res: Response): Promise<void>
     }
 
     sendSuccess(res, {
-      message: 'Design document generated successfully',
+      message: 'Design document generated successfully with AI',
       task: updatedTask,
     });
   } catch (error) {
     console.error('Error generating design:', error);
-    sendError(res, 500, 'Failed to generate design document');
+
+    // Provide more specific error messages
+    if (error instanceof ClaudeCodeTimeoutError) {
+      sendError(res, 504, 'AI generation timed out. Please try again.');
+    } else {
+      sendError(res, 500, `Failed to generate design document: ${(error as Error).message}`);
+    }
   }
 }
 
-/**
- * Generate mock design document (placeholder for AI integration)
- */
-function generateMockDesignDocument(
-  title: string,
-  featureList: string,
-  qaContext: string
-): string {
-  return `# Design Document: ${title}
-
-## Overview
-This design document outlines the implementation plan for the feature based on the collected requirements.
-
-## Feature Description
-${featureList}
-
-## Design Intent (from Q&A)
-${qaContext}
-
-## Technical Approach
-- Architecture: Component-based design
-- Data Flow: Unidirectional state management
-- Integration Points: API endpoints and state stores
-
-## Implementation Notes
-- Follow existing project patterns
-- Maintain type safety
-- Include comprehensive tests
-
----
-*This is an auto-generated design document. Review and refine as needed.*
-
-Generated at: ${new Date().toISOString()}
-`;
-}
+// Mock function removed - now using Claude Code AI for design document generation

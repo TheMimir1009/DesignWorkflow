@@ -23,6 +23,14 @@ import {
   buildFeatureAnalysisPrompt,
   buildDocumentModifyPrompt,
 } from '../utils/promptBuilder.ts';
+import { getLLMSettingsOrDefault } from '../utils/llmSettingsStorage.ts';
+import { createLLMProvider, type LLMProviderInterface } from '../utils/llmProvider.ts';
+import {
+  getModelConfigForStage,
+  isProviderConfigured,
+  type LLMModelConfig,
+  type TaskStage,
+} from '../../src/types/llm.ts';
 
 /**
  * In-memory storage for generation history (for demo purposes)
@@ -102,6 +110,161 @@ function handleClaudeCodeError(error: Error, res: Response): void {
   res.status(500).json({
     error: 'Internal server error',
     message: error.message,
+  });
+}
+
+/**
+ * Result of LLM provider selection
+ */
+interface LLMProviderSelection {
+  provider: LLMProviderInterface;
+  config: LLMModelConfig;
+  isDefault: boolean;
+}
+
+/**
+ * Select LLM provider based on project settings and task stage
+ * Returns the appropriate provider or throws an error if not available
+ * NO AUTO-FALLBACK: If configured provider fails validation, error is returned
+ */
+async function selectLLMProvider(
+  projectId: string | undefined,
+  stage: TaskStage
+): Promise<LLMProviderSelection> {
+  // If no projectId, use default Claude Code
+  if (!projectId) {
+    const settings = await getLLMSettingsOrDefault('default');
+    const config = settings.taskStageConfig.defaultModel;
+    return {
+      provider: createLLMProvider({
+        provider: 'claude-code',
+        apiKey: '',
+        isEnabled: true,
+        connectionStatus: 'connected',
+      }),
+      config,
+      isDefault: true,
+    };
+  }
+
+  // Get project settings
+  const settings = await getLLMSettingsOrDefault(projectId);
+  const modelConfig = getModelConfigForStage(settings.taskStageConfig, stage);
+
+  // Check if using default (Claude Code)
+  if (modelConfig.provider === 'claude-code') {
+    return {
+      provider: createLLMProvider({
+        provider: 'claude-code',
+        apiKey: '',
+        isEnabled: true,
+        connectionStatus: 'connected',
+      }),
+      config: modelConfig,
+      isDefault: true,
+    };
+  }
+
+  // Find the provider settings
+  const providerSettings = settings.providers.find(
+    (p) => p.provider === modelConfig.provider
+  );
+
+  if (!providerSettings) {
+    throw new LLMProviderError(
+      `Provider ${modelConfig.provider} not found in settings`,
+      modelConfig.provider,
+      modelConfig.modelId
+    );
+  }
+
+  // Check if provider is enabled
+  if (!providerSettings.isEnabled) {
+    throw new LLMProviderError(
+      `Provider ${modelConfig.provider} is not enabled. Please enable it in project settings.`,
+      modelConfig.provider,
+      modelConfig.modelId
+    );
+  }
+
+  // Check if provider is configured (has API key or valid endpoint)
+  if (!isProviderConfigured(providerSettings)) {
+    throw new LLMProviderError(
+      `Provider ${modelConfig.provider} is not configured. Please add API key or configure endpoint.`,
+      modelConfig.provider,
+      modelConfig.modelId
+    );
+  }
+
+  // Create and return the provider
+  return {
+    provider: createLLMProvider(providerSettings),
+    config: modelConfig,
+    isDefault: false,
+  };
+}
+
+/**
+ * Custom error class for LLM provider errors
+ */
+class LLMProviderError extends Error {
+  public provider: string;
+  public model: string;
+
+  constructor(message: string, provider: string, model: string) {
+    super(message);
+    this.name = 'LLMProviderError';
+    this.provider = provider;
+    this.model = model;
+  }
+}
+
+/**
+ * Handle LLM provider errors
+ */
+function handleLLMProviderError(
+  error: unknown,
+  res: Response,
+  provider?: string,
+  model?: string
+): void {
+  if (error instanceof LLMProviderError) {
+    res.status(400).json({
+      error: error.message,
+      provider: error.provider,
+      model: error.model,
+    });
+    return;
+  }
+
+  // Handle Claude Code specific errors (for backward compatibility)
+  if (error instanceof Error) {
+    if (error.name === 'ClaudeCodeTimeoutError') {
+      res.status(504).json({
+        error: 'Claude Code process timeout',
+        message: error.message,
+        provider: provider || 'claude-code',
+        model: model || 'claude-3.5-sonnet',
+      });
+      return;
+    }
+
+    if (error.name === 'ClaudeCodeError') {
+      res.status(500).json({
+        error: 'Claude Code execution failed',
+        message: error.message,
+        provider: provider || 'claude-code',
+        model: model || 'claude-3.5-sonnet',
+      });
+      return;
+    }
+  }
+
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  res.status(500).json({
+    error: `LLM generation failed: ${message}`,
+    provider: provider || 'unknown',
+    model: model || 'unknown',
   });
 }
 
@@ -278,29 +441,65 @@ generateRouter.post(
 /**
  * POST /api/generate/design-document
  * Generate design document from Q&A responses
+ * Supports LLM provider selection via projectId
  */
 generateRouter.post(
   '/design-document',
   validateRequired(['qaResponses']),
   async (req: Request, res: Response) => {
+    let selectedProvider: string | undefined;
+    let selectedModel: string | undefined;
+
     try {
-      const { qaResponses, referenceSystemIds, workingDir } = req.body;
+      const { qaResponses, referenceSystemIds, workingDir, projectId } = req.body;
 
       const prompt = buildDesignDocumentPrompt(qaResponses, referenceSystemIds);
 
-      const result = await claudeCodeRunner(
-        prompt,
-        workingDir || DEFAULT_WORKING_DIR,
-        { timeout: 180000, allowedTools: ['Read', 'Grep'] }
-      );
+      // Select LLM provider based on project settings
+      const { provider, config, isDefault } = await selectLLMProvider(projectId, 'design');
+      selectedProvider = config.provider;
+      selectedModel = config.modelId;
+
+      // If using default Claude Code, use the claudeCodeRunner
+      if (isDefault) {
+        const result = await claudeCodeRunner(
+          prompt,
+          workingDir || DEFAULT_WORKING_DIR,
+          { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        res.json({
+          success: true,
+          data: result.output,
+          rawOutput: result.rawOutput,
+          provider: config.provider,
+          model: config.modelId,
+        });
+        return;
+      }
+
+      // Use selected LLM provider
+      const result = await provider.generate(prompt, config, workingDir || DEFAULT_WORKING_DIR);
+
+      if (!result.success) {
+        // NO AUTO-FALLBACK: Return error if LLM fails
+        res.status(500).json({
+          error: `LLM generation failed: ${result.error}`,
+          provider: result.provider,
+          model: result.model,
+        });
+        return;
+      }
 
       res.json({
         success: true,
-        data: result.output,
+        data: result.content,
         rawOutput: result.rawOutput,
+        provider: result.provider,
+        model: result.model,
       });
     } catch (error) {
-      handleClaudeCodeError(error as Error, res);
+      handleLLMProviderError(error, res, selectedProvider, selectedModel);
     }
   }
 );
@@ -308,32 +507,68 @@ generateRouter.post(
 /**
  * POST /api/generate/prd
  * Generate PRD from design document
+ * Supports LLM provider selection via projectId
  */
 generateRouter.post(
   '/prd',
   validateRequired(['designDocContent']),
   async (req: Request, res: Response) => {
+    let selectedProvider: string | undefined;
+    let selectedModel: string | undefined;
+
     try {
-      const { designDocContent, projectContext, workingDir } = req.body;
+      const { designDocContent, projectContext, workingDir, projectId } = req.body;
 
       let prompt = buildPRDPrompt(designDocContent);
       if (projectContext) {
         prompt = `## Project Context\n${projectContext}\n\n${prompt}`;
       }
 
-      const result = await claudeCodeRunner(
-        prompt,
-        workingDir || DEFAULT_WORKING_DIR,
-        { timeout: 180000, allowedTools: ['Read', 'Grep'] }
-      );
+      // Select LLM provider based on project settings
+      const { provider, config, isDefault } = await selectLLMProvider(projectId, 'prd');
+      selectedProvider = config.provider;
+      selectedModel = config.modelId;
+
+      // If using default Claude Code, use the claudeCodeRunner
+      if (isDefault) {
+        const result = await claudeCodeRunner(
+          prompt,
+          workingDir || DEFAULT_WORKING_DIR,
+          { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        res.json({
+          success: true,
+          data: result.output,
+          rawOutput: result.rawOutput,
+          provider: config.provider,
+          model: config.modelId,
+        });
+        return;
+      }
+
+      // Use selected LLM provider
+      const result = await provider.generate(prompt, config, workingDir || DEFAULT_WORKING_DIR);
+
+      if (!result.success) {
+        // NO AUTO-FALLBACK: Return error if LLM fails
+        res.status(500).json({
+          error: `LLM generation failed: ${result.error}`,
+          provider: result.provider,
+          model: result.model,
+        });
+        return;
+      }
 
       res.json({
         success: true,
-        data: result.output,
+        data: result.content,
         rawOutput: result.rawOutput,
+        provider: result.provider,
+        model: result.model,
       });
     } catch (error) {
-      handleClaudeCodeError(error as Error, res);
+      handleLLMProviderError(error, res, selectedProvider, selectedModel);
     }
   }
 );
@@ -341,32 +576,68 @@ generateRouter.post(
 /**
  * POST /api/generate/prototype
  * Generate HTML prototype from PRD
+ * Supports LLM provider selection via projectId
  */
 generateRouter.post(
   '/prototype',
   validateRequired(['prdContent']),
   async (req: Request, res: Response) => {
+    let selectedProvider: string | undefined;
+    let selectedModel: string | undefined;
+
     try {
-      const { prdContent, styleFramework, workingDir } = req.body;
+      const { prdContent, styleFramework, workingDir, projectId } = req.body;
 
       let prompt = buildPrototypePrompt(prdContent);
       if (styleFramework) {
         prompt += `\n\n## Styling Framework\nUse ${styleFramework} for styling.`;
       }
 
-      const result = await claudeCodeRunner(
-        prompt,
-        workingDir || DEFAULT_WORKING_DIR,
-        { timeout: 180000, allowedTools: ['Read', 'Grep'] }
-      );
+      // Select LLM provider based on project settings
+      const { provider, config, isDefault } = await selectLLMProvider(projectId, 'prototype');
+      selectedProvider = config.provider;
+      selectedModel = config.modelId;
+
+      // If using default Claude Code, use the claudeCodeRunner
+      if (isDefault) {
+        const result = await claudeCodeRunner(
+          prompt,
+          workingDir || DEFAULT_WORKING_DIR,
+          { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        res.json({
+          success: true,
+          data: result.output,
+          rawOutput: result.rawOutput,
+          provider: config.provider,
+          model: config.modelId,
+        });
+        return;
+      }
+
+      // Use selected LLM provider
+      const result = await provider.generate(prompt, config, workingDir || DEFAULT_WORKING_DIR);
+
+      if (!result.success) {
+        // NO AUTO-FALLBACK: Return error if LLM fails
+        res.status(500).json({
+          error: `LLM generation failed: ${result.error}`,
+          provider: result.provider,
+          model: result.model,
+        });
+        return;
+      }
 
       res.json({
         success: true,
-        data: result.output,
+        data: result.content,
         rawOutput: result.rawOutput,
+        provider: result.provider,
+        model: result.model,
       });
     } catch (error) {
-      handleClaudeCodeError(error as Error, res);
+      handleLLMProviderError(error, res, selectedProvider, selectedModel);
     }
   }
 );

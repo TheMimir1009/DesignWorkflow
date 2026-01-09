@@ -249,6 +249,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
               column={column}
               tasks={getTasksByStatus(column.id)}
               generatingTasks={generatingTasks}
+              projectId={projectId}
             />
           ))}
         </div>

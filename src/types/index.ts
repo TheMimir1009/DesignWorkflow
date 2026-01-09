@@ -514,3 +514,9 @@ export interface CompletedDocumentsQueryOptions {
   limit?: number;
   offset?: number;
 }
+
+// =============================================================================
+// LLM Provider Types (SPEC-LLM-001)
+// =============================================================================
+
+export * from './llm';

@@ -182,3 +182,194 @@ export async function deleteSystem(systemId: string): Promise<boolean> {
 
   return true;
 }
+
+/**
+ * Check if a system name already exists in a project
+ * @param projectId - Project ID to check within
+ * @param name - Name to check for duplicates
+ * @param excludeId - Optional system ID to exclude from check (for updates)
+ * @returns true if a duplicate name exists, false otherwise
+ */
+export async function isSystemNameDuplicate(
+  projectId: string,
+  name: string,
+  excludeId?: string
+): Promise<boolean> {
+  const systems = await getSystemsByProject(projectId);
+
+  return systems.some(
+    (system) =>
+      system.name.toLowerCase() === name.toLowerCase() &&
+      system.id !== excludeId
+  );
+}
+
+// ============================================================================
+// Extended System Storage Functions
+// Used by systemStorage.test.ts for enhanced system document management
+// ============================================================================
+
+/**
+ * Ensure systems directory exists for a project
+ * @param projectId - Project ID
+ */
+export async function ensureSystemsDirectoryExists(projectId: string): Promise<void> {
+  const systemsDir = path.join(WORKSPACE_PATH, projectId, 'systems');
+  await fs.mkdir(systemsDir, { recursive: true });
+
+  // Create systems.json if it doesn't exist
+  const systemsPath = getSystemsFilePath(projectId);
+  try {
+    await fs.access(systemsPath);
+  } catch {
+    await fs.writeFile(systemsPath, '[]', 'utf-8');
+  }
+}
+
+/**
+ * Get all system documents with content from .md files
+ * @param projectId - Project ID
+ * @returns Array of system documents with content loaded
+ */
+export async function getAllSystemDocuments(projectId: string): Promise<SystemDocument[]> {
+  const systems = await getSystemsByProject(projectId);
+
+  // Load content from .md files for each system
+  const documentsWithContent: SystemDocument[] = [];
+  for (const system of systems) {
+    const mdPath = getSystemMdPath(projectId, system.id);
+    let content = '';
+    try {
+      content = await fs.readFile(mdPath, 'utf-8');
+    } catch {
+      // .md file doesn't exist, use empty content
+    }
+    documentsWithContent.push({ ...system, content });
+  }
+
+  return documentsWithContent;
+}
+
+/**
+ * Get a system document by ID with content
+ * @param projectId - Project ID
+ * @param documentId - Document ID
+ * @returns System document with content, or null if not found
+ */
+export async function getSystemDocumentById(
+  projectId: string,
+  documentId: string
+): Promise<SystemDocument | null> {
+  const systems = await getSystemsByProject(projectId);
+  const system = systems.find((s) => s.id === documentId);
+
+  if (!system) {
+    return null;
+  }
+
+  // Load content from .md file
+  const mdPath = getSystemMdPath(projectId, documentId);
+  let content = '';
+  try {
+    content = await fs.readFile(mdPath, 'utf-8');
+  } catch {
+    // .md file doesn't exist
+  }
+
+  return { ...system, content };
+}
+
+/**
+ * Save a system document (creates or updates)
+ * Stores metadata in systems.json (without content) and content in separate .md file
+ * @param projectId - Project ID
+ * @param document - System document to save
+ */
+export async function saveSystemDocument(
+  projectId: string,
+  document: SystemDocument
+): Promise<void> {
+  const systems = await getSystemsByProject(projectId);
+
+  // Extract content to save separately
+  const { content, ...metadataOnly } = document;
+
+  // Check if document already exists
+  const existingIndex = systems.findIndex((s) => s.id === document.id);
+
+  if (existingIndex >= 0) {
+    // Update existing
+    systems[existingIndex] = metadataOnly as SystemDocument;
+  } else {
+    // Add new
+    systems.push(metadataOnly as SystemDocument);
+  }
+
+  // Save systems.json (without content)
+  await saveProjectSystems(projectId, systems);
+
+  // Save content to .md file
+  const mdPath = getSystemMdPath(projectId, document.id);
+  await fs.writeFile(mdPath, content || '', 'utf-8');
+}
+
+/**
+ * Delete a system document
+ * @param projectId - Project ID
+ * @param documentId - Document ID to delete
+ */
+export async function deleteSystemDocument(
+  projectId: string,
+  documentId: string
+): Promise<void> {
+  const systems = await getSystemsByProject(projectId);
+  const filteredSystems = systems.filter((s) => s.id !== documentId);
+
+  await saveProjectSystems(projectId, filteredSystems);
+
+  // Delete .md file
+  const mdPath = getSystemMdPath(projectId, documentId);
+  try {
+    await fs.unlink(mdPath);
+  } catch {
+    // Ignore if file doesn't exist
+  }
+}
+
+/**
+ * Get unique categories from all system documents in a project
+ * @param projectId - Project ID
+ * @returns Sorted array of unique category names
+ */
+export async function getCategories(projectId: string): Promise<string[]> {
+  const systems = await getSystemsByProject(projectId);
+
+  const categoriesSet = new Set<string>();
+  for (const system of systems) {
+    if (system.category) {
+      categoriesSet.add(system.category);
+    }
+  }
+
+  return Array.from(categoriesSet).sort();
+}
+
+/**
+ * Get unique tags from all system documents in a project
+ * @param projectId - Project ID
+ * @returns Sorted array of unique tags
+ */
+export async function getTags(projectId: string): Promise<string[]> {
+  const systems = await getSystemsByProject(projectId);
+
+  const tagsSet = new Set<string>();
+  for (const system of systems) {
+    if (system.tags) {
+      for (const tag of system.tags) {
+        tagsSet.add(tag);
+      }
+    }
+  }
+
+  return Array.from(tagsSet).sort();
+}

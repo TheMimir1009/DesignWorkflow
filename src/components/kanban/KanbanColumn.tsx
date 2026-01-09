@@ -5,6 +5,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanCard } from './KanbanCard';
+import { ColumnSettingsButton } from '../llm/ColumnSettingsButton';
 import type { Task } from '../../types';
 import type { KanbanColumnDef } from '../../types/kanban';
 
@@ -18,17 +19,22 @@ export interface KanbanColumnProps {
   tasks: Task[];
   /** Set of task IDs currently generating content */
   generatingTasks: Set<string>;
+  /** Project ID for LLM settings */
+  projectId: string;
 }
 
 /**
  * KanbanColumn - Drop zone column for Kanban board
  */
-export function KanbanColumn({ column, tasks, generatingTasks }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, generatingTasks, projectId }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
 
   const taskIds = tasks.map((task) => task.id);
+
+  // Show LLM settings button for columns that support generation
+  const showLLMSettings = column.id !== 'featurelist';
 
   return (
     <div
@@ -41,7 +47,16 @@ export function KanbanColumn({ column, tasks, generatingTasks }: KanbanColumnPro
     >
       {/* Column Header */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-700">{column.title}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-gray-700">{column.title}</h3>
+          {showLLMSettings && (
+            <ColumnSettingsButton
+              columnId={column.id}
+              columnTitle={column.title}
+              projectId={projectId}
+            />
+          )}
+        </div>
         <span className="flex items-center justify-center w-6 h-6 text-sm font-medium text-gray-600 bg-gray-200 rounded-full">
           {tasks.length}
         </span>
