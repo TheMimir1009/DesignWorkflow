@@ -22,6 +22,7 @@ import {
   buildPrototypePrompt,
   buildFeatureAnalysisPrompt,
   buildDocumentModifyPrompt,
+  type ProjectContext,
 } from '../utils/promptBuilder.ts';
 import { getLLMSettingsOrDefault } from '../utils/llmSettingsStorage.ts';
 import { createLLMProvider, type LLMProviderInterface } from '../utils/llmProvider.ts';
@@ -30,7 +31,10 @@ import {
   isProviderConfigured,
   type LLMModelConfig,
   type TaskStage,
+  type LLMProvider,
 } from '../../src/types/llm.ts';
+import { addGenerationHistoryEntry } from '../utils/taskStorage.ts';
+import type { GenerationDocumentType, GenerationAction } from '../../src/types/index.ts';
 
 /**
  * In-memory storage for generation history (for demo purposes)
@@ -216,6 +220,40 @@ class LLMProviderError extends Error {
     this.name = 'LLMProviderError';
     this.provider = provider;
     this.model = model;
+  }
+}
+
+/**
+ * Record generation history for a task (SPEC-MODELHISTORY-001)
+ * This is a non-blocking operation - errors are logged but don't affect the response
+ */
+async function recordGenerationHistory(
+  projectId: string | undefined,
+  taskId: string | undefined,
+  documentType: GenerationDocumentType,
+  action: GenerationAction,
+  provider: LLMProvider,
+  model: string,
+  tokens?: { input: number; output: number },
+  feedback?: string
+): Promise<void> {
+  if (!projectId || !taskId) {
+    // Skip recording if projectId or taskId is not provided
+    return;
+  }
+
+  try {
+    await addGenerationHistoryEntry(projectId, taskId, {
+      documentType,
+      action,
+      provider,
+      model,
+      tokens,
+      feedback,
+    });
+  } catch (error) {
+    // Log error but don't fail the request
+    console.error('Failed to record generation history:', error);
   }
 }
 
@@ -442,6 +480,7 @@ generateRouter.post(
  * POST /api/generate/design-document
  * Generate design document from Q&A responses
  * Supports LLM provider selection via projectId
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
  */
 generateRouter.post(
   '/design-document',
@@ -451,7 +490,7 @@ generateRouter.post(
     let selectedModel: string | undefined;
 
     try {
-      const { qaResponses, referenceSystemIds, workingDir, projectId } = req.body;
+      const { qaResponses, referenceSystemIds, workingDir, projectId, taskId } = req.body;
 
       const prompt = buildDesignDocumentPrompt(qaResponses, referenceSystemIds);
 
@@ -466,6 +505,16 @@ generateRouter.post(
           prompt,
           workingDir || DEFAULT_WORKING_DIR,
           { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        await recordGenerationHistory(
+          projectId,
+          taskId,
+          'design',
+          'create',
+          config.provider as LLMProvider,
+          config.modelId
         );
 
         res.json({
@@ -490,6 +539,17 @@ generateRouter.post(
         });
         return;
       }
+
+      // Record generation history (SPEC-MODELHISTORY-001)
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        'design',
+        'create',
+        result.provider as LLMProvider,
+        result.model,
+        result.tokens
+      );
 
       res.json({
         success: true,
@@ -508,6 +568,7 @@ generateRouter.post(
  * POST /api/generate/prd
  * Generate PRD from design document
  * Supports LLM provider selection via projectId
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
  */
 generateRouter.post(
   '/prd',
@@ -517,12 +578,23 @@ generateRouter.post(
     let selectedModel: string | undefined;
 
     try {
-      const { designDocContent, projectContext, workingDir, projectId } = req.body;
+      const { designDocContent, projectContext, workingDir, projectId, taskId } = req.body;
 
-      let prompt = buildPRDPrompt(designDocContent);
+      // Handle projectContext: can be string (legacy) or ProjectContext object (new)
+      let parsedProjectContext: ProjectContext | undefined;
       if (projectContext) {
-        prompt = `## Project Context\n${projectContext}\n\n${prompt}`;
+        if (typeof projectContext === 'string') {
+          // Legacy: string projectContext - parse as techStack description
+          parsedProjectContext = {
+            techStack: [projectContext],
+          };
+        } else if (typeof projectContext === 'object') {
+          // New: structured ProjectContext object
+          parsedProjectContext = projectContext as ProjectContext;
+        }
       }
+
+      const prompt = buildPRDPrompt(designDocContent, parsedProjectContext);
 
       // Select LLM provider based on project settings
       const { provider, config, isDefault } = await selectLLMProvider(projectId, 'prd');
@@ -535,6 +607,16 @@ generateRouter.post(
           prompt,
           workingDir || DEFAULT_WORKING_DIR,
           { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        await recordGenerationHistory(
+          projectId,
+          taskId,
+          'prd',
+          'create',
+          config.provider as LLMProvider,
+          config.modelId
         );
 
         res.json({
@@ -560,6 +642,17 @@ generateRouter.post(
         return;
       }
 
+      // Record generation history (SPEC-MODELHISTORY-001)
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        'prd',
+        'create',
+        result.provider as LLMProvider,
+        result.model,
+        result.tokens
+      );
+
       res.json({
         success: true,
         data: result.content,
@@ -577,6 +670,7 @@ generateRouter.post(
  * POST /api/generate/prototype
  * Generate HTML prototype from PRD
  * Supports LLM provider selection via projectId
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
  */
 generateRouter.post(
   '/prototype',
@@ -586,7 +680,7 @@ generateRouter.post(
     let selectedModel: string | undefined;
 
     try {
-      const { prdContent, styleFramework, workingDir, projectId } = req.body;
+      const { prdContent, styleFramework, workingDir, projectId, taskId } = req.body;
 
       let prompt = buildPrototypePrompt(prdContent);
       if (styleFramework) {
@@ -606,6 +700,16 @@ generateRouter.post(
           { timeout: 180000, allowedTools: ['Read', 'Grep'] }
         );
 
+        // Record generation history (SPEC-MODELHISTORY-001)
+        await recordGenerationHistory(
+          projectId,
+          taskId,
+          'prototype',
+          'create',
+          config.provider as LLMProvider,
+          config.modelId
+        );
+
         res.json({
           success: true,
           data: result.output,
@@ -628,6 +732,17 @@ generateRouter.post(
         });
         return;
       }
+
+      // Record generation history (SPEC-MODELHISTORY-001)
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        'prototype',
+        'create',
+        result.provider as LLMProvider,
+        result.model,
+        result.tokens
+      );
 
       res.json({
         success: true,
@@ -675,13 +790,14 @@ generateRouter.post(
 /**
  * POST /api/generate/modify
  * Modify existing document based on instructions
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
  */
 generateRouter.post(
   '/modify',
   validateRequired(['originalContent', 'modificationInstructions']),
   async (req: Request, res: Response) => {
     try {
-      const { originalContent, modificationInstructions, documentType, workingDir } = req.body;
+      const { originalContent, modificationInstructions, documentType, workingDir, projectId, taskId } = req.body;
 
       let prompt = buildDocumentModifyPrompt(originalContent, modificationInstructions);
       if (documentType) {
@@ -694,10 +810,32 @@ generateRouter.post(
         { timeout: 180000, allowedTools: ['Read', 'Grep'] }
       );
 
+      // Record generation history for modification (SPEC-MODELHISTORY-001)
+      // Map documentType to GenerationDocumentType
+      let mappedDocType: GenerationDocumentType = 'design';
+      if (documentType === 'prd' || documentType === 'PRD') {
+        mappedDocType = 'prd';
+      } else if (documentType === 'prototype' || documentType === 'Prototype') {
+        mappedDocType = 'prototype';
+      }
+
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        mappedDocType,
+        'modify',
+        'claude-code',
+        'claude-3.5-sonnet',
+        undefined,
+        modificationInstructions
+      );
+
       res.json({
         success: true,
         data: result.output,
         rawOutput: result.rawOutput,
+        provider: 'claude-code',
+        model: 'claude-3.5-sonnet',
       });
     } catch (error) {
       handleClaudeCodeError(error as Error, res);

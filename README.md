@@ -23,6 +23,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Relevant Systems Auto-Discovery (SPEC-AUTODISCOVERY-001)
 - Completed Task Document API (SPEC-DOCREF-001)
 - Document Reference Panel UI (SPEC-DOCREF-002)
+- AI Model History Recording (SPEC-MODELHISTORY-001)
 
 ## Project Context
 

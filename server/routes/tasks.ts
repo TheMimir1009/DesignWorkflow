@@ -13,8 +13,10 @@ import {
   createTask,
   deleteTask,
   isValidStatus,
-  generateMockAIContent,
+  addGenerationHistoryEntry,
 } from '../utils/taskStorage.ts';
+import { buildPRDPrompt, buildPrototypePrompt } from '../utils/promptBuilder.ts';
+import { callClaudeCode } from '../utils/claudeCodeRunner.ts';
 
 export const tasksRouter = Router();
 
@@ -140,8 +142,141 @@ tasksRouter.post('/:id/trigger-ai', async (req: Request, res: Response): Promise
       return;
     }
 
-    // Generate AI content (mock implementation)
-    const aiGeneratedContent = generateMockAIContent(taskResult.task, targetStatus as TaskStatus);
+    const task = taskResult.task;
+    let aiGeneratedContent: Partial<typeof task> = { status: targetStatus as TaskStatus };
+
+    // Generate AI content based on target status
+    if (targetStatus === 'prd') {
+      // PRD generation requires Design Document
+      if (!task.designDocument) {
+        sendError(res, 400, 'Design Document is required to generate PRD');
+        return;
+      }
+
+      // Build PRD prompt from GDD (Game Design Document)
+      const prompt = buildPRDPrompt(task.designDocument);
+      const fullPrompt = `
+## Task Information
+- Title: ${task.title}
+
+${prompt}
+
+## Additional Instructions
+- Write the PRD in Korean (한국어)
+- Focus on practical implementation details for developers
+- Extract technical requirements from the Game Design Document
+`;
+
+      try {
+        const result = await callClaudeCode(fullPrompt, process.cwd(), {
+          timeout: 300000, // 5 minutes
+          allowedTools: ['Read', 'Grep'],
+        });
+
+        // Extract content from result (Claude Code returns { result: "content" })
+        let generatedContent: string;
+        if (result.output && typeof result.output === 'object' && 'result' in result.output) {
+          generatedContent = (result.output as { result: string }).result;
+        } else if (result.rawOutput) {
+          try {
+            const parsed = JSON.parse(result.rawOutput);
+            generatedContent = parsed.result || result.rawOutput;
+          } catch {
+            generatedContent = result.rawOutput;
+          }
+        } else {
+          throw new Error('No content generated from Claude Code');
+        }
+        aiGeneratedContent = {
+          status: 'prd' as TaskStatus,
+          prd: generatedContent,
+        };
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        try {
+          await addGenerationHistoryEntry(taskResult.projectId, id, {
+            documentType: 'prd',
+            action: 'create',
+            provider: 'claude-code',
+            model: 'claude-3.5-sonnet',
+          });
+        } catch (historyError) {
+          console.error('Failed to record PRD generation history:', historyError);
+        }
+      } catch (aiError) {
+        console.error('AI PRD generation failed:', aiError);
+        sendError(res, 500, 'Failed to generate PRD with AI');
+        return;
+      }
+    } else if (targetStatus === 'prototype') {
+      // Prototype generation requires PRD
+      if (!task.prd) {
+        sendError(res, 400, 'PRD is required to generate Prototype');
+        return;
+      }
+
+      // Build Prototype prompt from PRD
+      const prompt = buildPrototypePrompt(task.prd);
+      const fullPrompt = `
+## Task Information
+- Title: ${task.title}
+
+${prompt}
+
+## Additional Instructions
+- Generate a single, self-contained HTML file
+- Include all CSS and JavaScript inline
+- Use Tailwind CSS via CDN for styling
+- Make the prototype interactive and visually appealing
+- Include Korean text where appropriate
+`;
+
+      try {
+        const result = await callClaudeCode(fullPrompt, process.cwd(), {
+          timeout: 300000, // 5 minutes
+          allowedTools: ['Read', 'Grep'],
+        });
+
+        // Extract content from result (Claude Code returns { result: "content" })
+        let generatedContent: string;
+        if (result.output && typeof result.output === 'object' && 'result' in result.output) {
+          generatedContent = (result.output as { result: string }).result;
+        } else if (result.rawOutput) {
+          try {
+            const parsed = JSON.parse(result.rawOutput);
+            generatedContent = parsed.result || result.rawOutput;
+          } catch {
+            generatedContent = result.rawOutput;
+          }
+        } else {
+          throw new Error('No content generated from Claude Code');
+        }
+        aiGeneratedContent = {
+          status: 'prototype' as TaskStatus,
+          prototype: generatedContent,
+        };
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        try {
+          await addGenerationHistoryEntry(taskResult.projectId, id, {
+            documentType: 'prototype',
+            action: 'create',
+            provider: 'claude-code',
+            model: 'claude-3.5-sonnet',
+          });
+        } catch (historyError) {
+          console.error('Failed to record Prototype generation history:', historyError);
+        }
+      } catch (aiError) {
+        console.error('AI Prototype generation failed:', aiError);
+        sendError(res, 500, 'Failed to generate Prototype with AI');
+        return;
+      }
+    } else {
+      // For other statuses (featurelist, design), just update status
+      // Design document is generated via Q&A flow, not here
+      aiGeneratedContent = { status: targetStatus as TaskStatus };
+    }
 
     // Update task with AI generated content
     const updatedTask = await updateTask(id, aiGeneratedContent);

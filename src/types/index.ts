@@ -47,6 +47,8 @@ export interface Task {
   references: string[];
   qaAnswers: QAAnswer[];
   revisions: Revision[];
+  /** AI model usage history for document generations (SPEC-MODELHISTORY-001) */
+  generationHistory?: GenerationHistoryEntry[];
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -520,3 +522,44 @@ export interface CompletedDocumentsQueryOptions {
 // =============================================================================
 
 export * from './llm';
+
+// =============================================================================
+// Generation History Types (SPEC-MODELHISTORY-001)
+// =============================================================================
+
+import type { LLMProvider } from './llm';
+
+/**
+ * Document type for generation history
+ */
+export type GenerationDocumentType = 'design' | 'prd' | 'prototype';
+
+/**
+ * Action type for generation history
+ */
+export type GenerationAction = 'create' | 'modify';
+
+/**
+ * Entry in the generation history tracking AI model usage
+ */
+export interface GenerationHistoryEntry {
+  /** Unique identifier for this entry */
+  id: string;
+  /** Type of document generated */
+  documentType: GenerationDocumentType;
+  /** Whether this was a creation or modification */
+  action: GenerationAction;
+  /** LLM provider used */
+  provider: LLMProvider;
+  /** Model identifier (e.g., 'gpt-4o', 'claude-3.5-sonnet') */
+  model: string;
+  /** ISO 8601 timestamp when generation occurred */
+  createdAt: string;
+  /** Token usage information (if available) */
+  tokens?: {
+    input: number;
+    output: number;
+  };
+  /** User feedback for modification requests */
+  feedback?: string;
+}

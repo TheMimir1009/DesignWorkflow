@@ -4,7 +4,8 @@
  */
 import fs from 'fs/promises';
 import path from 'path';
-import type { Task, TaskStatus, CreateTaskDto } from '../../src/types/index.ts';
+import type { Task, TaskStatus, CreateTaskDto, GenerationHistoryEntry, GenerationDocumentType, GenerationAction } from '../../src/types/index.ts';
+import type { LLMProvider } from '../../src/types/llm.ts';
 import { v4 as uuidv4 } from 'uuid';
 import { WORKSPACE_PATH } from './projectStorage.ts';
 
@@ -130,6 +131,7 @@ export async function createTask(data: CreateTaskDto): Promise<Task> {
     references: data.references || [],
     qaAnswers: [],
     revisions: [],
+    generationHistory: [], // SPEC-MODELHISTORY-001: Initialize empty history
     isArchived: false,
     createdAt: now,
     updatedAt: now,
@@ -140,6 +142,77 @@ export async function createTask(data: CreateTaskDto): Promise<Task> {
   await saveProjectTasks(data.projectId, tasks);
 
   return newTask;
+}
+
+/**
+ * Input for adding a generation history entry
+ */
+export interface AddGenerationHistoryInput {
+  documentType: GenerationDocumentType;
+  action: GenerationAction;
+  provider: LLMProvider;
+  model: string;
+  tokens?: {
+    input: number;
+    output: number;
+  };
+  feedback?: string;
+}
+
+/**
+ * Add a generation history entry to a task (SPEC-MODELHISTORY-001)
+ * @param projectId - Project ID
+ * @param taskId - Task ID
+ * @param entry - Generation history entry data (without id and createdAt)
+ * @returns Updated task if successful, null otherwise
+ */
+export async function addGenerationHistoryEntry(
+  projectId: string,
+  taskId: string,
+  entry: AddGenerationHistoryInput
+): Promise<Task | null> {
+  try {
+    const tasks = await getTasksByProject(projectId);
+    const taskIndex = tasks.findIndex((t) => t.id === taskId);
+
+    if (taskIndex === -1) {
+      console.error(`Task ${taskId} not found in project ${projectId}`);
+      return null;
+    }
+
+    const task = tasks[taskIndex];
+
+    // Create the full history entry with id and timestamp
+    const historyEntry: GenerationHistoryEntry = {
+      id: uuidv4(),
+      documentType: entry.documentType,
+      action: entry.action,
+      provider: entry.provider,
+      model: entry.model,
+      createdAt: new Date().toISOString(),
+      ...(entry.tokens && { tokens: entry.tokens }),
+      ...(entry.feedback && { feedback: entry.feedback }),
+    };
+
+    // Initialize generationHistory if it doesn't exist (backward compatibility)
+    const generationHistory = task.generationHistory ?? [];
+    generationHistory.push(historyEntry);
+
+    // Update task
+    const updatedTask: Task = {
+      ...task,
+      generationHistory,
+      updatedAt: new Date().toISOString(),
+    };
+
+    tasks[taskIndex] = updatedTask;
+    await saveProjectTasks(projectId, tasks);
+
+    return updatedTask;
+  } catch (error) {
+    console.error('Error adding generation history entry:', error);
+    return null;
+  }
 }
 
 /**
