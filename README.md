@@ -25,6 +25,19 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Document Reference Panel UI (SPEC-DOCREF-002)
 - AI Model History Recording (SPEC-MODELHISTORY-001)
 
+### In Progress Features
+
+- Document Editing Enhancement (SPEC-DOCEDIT-001)
+  - Backend Implementation: 100% Complete (39 tests passed)
+  - Frontend Implementation: Pending
+  - Features: Version management, diff generation, auto-save API
+
+- Circular Dependency Fix (SPEC-DOCEDIT-002)
+  - Created shared types.ts file for document components
+  - Extracted SaveStatus type to break circular dependency
+  - EnhancedDocumentEditor and SaveStatusIndicator updated
+  - Test coverage: 7/7 tests passed for types and circular dependency
+
 ## Project Context
 
 This project implements a Kanban board-based workflow system for game planning documents. It automates the pipeline from Feature List to Design Document to PRD to Prototype, with AI assistance at each stage.
@@ -68,8 +81,8 @@ src/
   types/         - TypeScript interfaces
   store/         - Zustand store definitions
 server/
-  routes/        - Express API routes
-  utils/         - Server utilities
+  routes/        - Express API routes (including documentVersions.ts)
+  utils/         - Server utilities (including versionStorage.ts, diffGenerator.ts)
 workspace/
   projects/      - Per-project data storage
   templates/
@@ -105,3 +118,8 @@ npx tsc --noEmit     # Check TypeScript without emitting
 - Do not use any state management other than Zustand
 - Do not store secrets in code
 - Do not commit node_modules or build artifacts
+
+## New Specifications (Draft)
+
+- Circular Dependency Fix (SPEC-DOCEDIT-002) - Fix blank screen issue
+- Game Development Specification (SPEC-GAME-001) - Bag collection game PRD

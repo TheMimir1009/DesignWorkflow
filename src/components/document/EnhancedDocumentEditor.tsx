@@ -20,11 +20,10 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { SaveStatusIndicator } from './SaveStatusIndicator';
+import type { SaveStatus } from './types';
 
-/**
- * Save status type
- */
-export type SaveStatus = 'saved' | 'saving' | 'error' | 'unsaved';
+// Re-export SaveStatus type for backward compatibility
+export type { SaveStatus };
 
 /**
  * Props for EnhancedDocumentEditor component
@@ -283,47 +282,6 @@ export function EnhancedDocumentEditor({
   useEffect(() => {
     setContent(initialContent);
   }, [initialContent]);
-
-  /**
-   * Insert markdown formatting around selection
-   */
-  const insertMarkdownFormatting = useCallback(
-    (view: EditorView, prefix: string, suffix: string) => {
-      const { from, to } = view.state.selection.main;
-      const selectedText = view.state.sliceDoc(from, to);
-      const insertion = `${prefix}${selectedText}${suffix}`;
-      view.dispatch({
-        changes: {
-          from,
-          to,
-          insert: insertion,
-        },
-        selection: {
-          anchor: from + prefix.length,
-          head: to + prefix.length,
-        },
-      });
-    },
-    []
-  );
-
-  /**
-   * Insert code block
-   */
-  const insertCodeBlock = useCallback((view: EditorView) => {
-    const { from } = view.state.selection.main;
-    const insertion = '```\n\n```';
-    view.dispatch({
-      changes: {
-        from,
-        insert: insertion,
-      },
-      selection: {
-        anchor: from + 5,
-        head: from + 5,
-      },
-    });
-  }, []);
 
   return (
     <div

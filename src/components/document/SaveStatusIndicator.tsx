@@ -10,7 +10,10 @@
  * - Accessible ARIA labels
  */
 import { useState, useEffect } from 'react';
-import { SaveStatus } from './EnhancedDocumentEditor';
+import type { SaveStatus } from './types';
+
+// Re-export SaveStatus type for convenience
+export type { SaveStatus };
 
 /**
  * Props for SaveStatusIndicator component
