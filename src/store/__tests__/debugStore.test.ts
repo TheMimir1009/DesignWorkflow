@@ -5,7 +5,7 @@
  * Following RED-GREEN-REFACTOR TDD cycle
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useDebugStore } from '../debugStore';
 

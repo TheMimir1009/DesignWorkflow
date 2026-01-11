@@ -1,5 +1,5 @@
 /**
- * Type Definitions for LLM Debug Console (SPEC-DEBUG-001)
+ * Type Definitions for LLM Debug Console (SPEC-DEBUG-001, SPEC-DEBUG-002)
  * TAG-001: Data Model & Store
  */
 
@@ -72,6 +72,9 @@ export interface DebugState {
   selectedLog: LLMCallLog | null;
   stats: DebugStats;
 
+  // SPEC-DEBUG-002: Console visibility state (REQ-S-001)
+  isOpen: boolean;
+
   // Actions
   addLog: (log: LLMCallLog) => void;
   updateLog: (id: string, updates: Partial<LLMCallLog>) => void;
@@ -82,6 +85,10 @@ export interface DebugState {
   exportLogs: (format: 'json' | 'csv') => void;
   retryRequest: (id: string) => Promise<void>;
   reset: () => void;
+
+  // SPEC-DEBUG-002: Console toggle action
+  toggle: () => void;
+  setIsOpen: (open: boolean) => void;
 }
 
 /**
@@ -113,4 +120,37 @@ export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+}
+
+/**
+ * SPEC-DEBUG-002: Keyboard shortcut configuration
+ */
+export interface DebugShortcutConfig {
+  key: string;
+  modifiers: {
+    ctrl?: boolean;
+    meta?: boolean; // Cmd on macOS
+    alt?: boolean;
+    shift?: boolean;
+  };
+  enabled: boolean;
+}
+
+/**
+ * SPEC-DEBUG-002: Hook return value
+ */
+export interface UseDebugShortcutReturn {
+  isSupported: boolean;
+  isListening: boolean;
+  register: () => void;
+  unregister: () => void;
+}
+
+/**
+ * SPEC-DEBUG-002: Platform-specific shortcut display
+ */
+export interface ShortcutDisplay {
+  key: string;
+  modifierKey: string; // 'Ctrl' or 'Cmd'
+  fullShortcut: string; // 'Ctrl+Alt+D' or 'Cmd+Alt+D'
 }

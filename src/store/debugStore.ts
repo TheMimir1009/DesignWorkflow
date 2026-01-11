@@ -1,6 +1,6 @@
 /**
- * Debug Store (SPEC-DEBUG-001 TAG-001 TASK-001)
- * Zustand store for managing LLM debug logs
+ * Debug Store (SPEC-DEBUG-001 TAG-001 TASK-001, SPEC-DEBUG-002)
+ * Zustand store for managing LLM debug logs and console visibility
  */
 
 import { create } from 'zustand';
@@ -8,11 +8,6 @@ import type { DebugState, LLMCallLog, DebugFilters } from '../types/debug';
 import { calculateCost } from '../config/modelPricing';
 
 const MAX_LOGS = 1000;
-
-interface LogWithStatusChange {
-  previousStatus?: string;
-  newStatus: string;
-}
 
 const createDebugStore = () => {
   return create<DebugState>((set, get) => ({
@@ -32,6 +27,9 @@ const createDebugStore = () => {
       totalTokens: 0,
       totalCost: 0,
     },
+
+    // SPEC-DEBUG-002: Console visibility state (REQ-S-001)
+    isOpen: false,
 
     // Actions
     addLog: (log: LLMCallLog) => {
@@ -86,7 +84,7 @@ const createDebugStore = () => {
         }
 
         // Update stats based on status change
-        let stats = { ...state.stats };
+        const stats = { ...state.stats };
 
         if (previousStatus !== newStatus) {
           if (newStatus === 'success') {
@@ -173,7 +171,18 @@ const createDebugStore = () => {
           totalTokens: 0,
           totalCost: 0,
         },
+        isOpen: false, // SPEC-DEBUG-002
       });
+    },
+
+    // SPEC-DEBUG-002: Console toggle action (REQ-E-001, REQ-E-002)
+    toggle: () => {
+      set((state) => ({ isOpen: !state.isOpen }));
+    },
+
+    // SPEC-DEBUG-002: Direct console open/close control
+    setIsOpen: (open: boolean) => {
+      set({ isOpen: open });
     },
   }));
 };
