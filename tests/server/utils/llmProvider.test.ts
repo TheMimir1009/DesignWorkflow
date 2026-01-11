@@ -90,7 +90,7 @@ describe('LLM Provider Factory', () => {
 
     it('should throw error for unknown provider', () => {
       const settings = {
-        provider: 'unknown-provider' as any,
+        provider: 'unknown-provider' as 'claude-code' | 'ollama' | 'lm-studio',
         apiKey: '',
         isEnabled: true,
         connectionStatus: 'untested' as const,
@@ -204,7 +204,7 @@ describe('OpenAI Provider', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
@@ -235,7 +235,7 @@ describe('OpenAI Provider', () => {
     });
 
     it('should return success with models list', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({
           data: [
@@ -308,7 +308,7 @@ describe('Gemini Provider', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
@@ -368,7 +368,7 @@ describe('LMStudio Provider', () => {
         },
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
       });
@@ -389,7 +389,7 @@ describe('LMStudio Provider', () => {
 
   describe('testConnection', () => {
     it('should return helpful error when server not running', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('fetch failed'));
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('fetch failed'));
 
       const provider = new LMStudioProvider({ endpoint: 'http://localhost:1234/v1' });
       const result = await provider.testConnection();
@@ -399,7 +399,7 @@ describe('LMStudio Provider', () => {
     });
 
     it('should return success with models list', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({
           data: [
