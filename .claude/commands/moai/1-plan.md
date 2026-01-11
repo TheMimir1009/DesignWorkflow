@@ -98,8 +98,8 @@ Associated Agents for SPEC Planning and Creation:
   WHY: Fast, focused discovery without blocking agent
   IMPACT: Reduces manual project discovery time
 
-- manager-spec: SPEC generation in EARS format and planning
-  WHY: Specialized domain knowledge for structured requirements
+- general-purpose (acting as SPEC Expert): SPEC generation in EARS format and planning
+  WHY: All-purpose agent with full tool access for structured requirements
   IMPACT: Ensures consistent SPEC document quality
 
 - manager-git: Git workflow and branch management
@@ -112,7 +112,7 @@ Phase 1A: Research & Analysis
 
 - Use built-in Explore agent for fast codebase analysis (read-only)
 - Use Plan agent (auto-invoked in plan mode) for SPEC research
-- Use MoAI manager-spec agent for SPEC generation
+- Use general-purpose agent (acting as SPEC Expert) for SPEC generation
 
 Phase 1B: Specialized Analysis
 
@@ -132,8 +132,8 @@ Command implements sequential chaining through 4 distinct phases:
 
 Phase Flow:
 - Phase 1A (Optional): Project Exploration via Explore subagent
-- Phase 1B (Required): SPEC Planning via manager-spec subagent
-- Phase 2: SPEC Document Creation via manager-spec subagent
+- Phase 1B (Required): SPEC Planning via general-purpose subagent (acting as SPEC Expert)
+- Phase 2: SPEC Document Creation via general-purpose subagent (acting as SPEC Expert)
 - Phase 3: Git Branch Setup via manager-git subagent (conditional)
 
 Each phase receives context and outputs from previous phases.
@@ -181,7 +181,7 @@ Refer to CLAUDE.md "Agent Chaining Patterns" (lines 96-120) for complete pattern
 User Command: /moai:1-plan "description"
     ↓
 /moai:1-plan Command
-    └─ Task(subagent_type="Explore" or "manager-spec")
+    └─ Task(subagent_type="Explore" or "general-purpose" as SPEC Expert)
         ├─ Phase 1A (Optional): Project Exploration
         ├─ Phase 1B (Required): SPEC Planning
         ├─ Phase 2: SPEC Document Creation
@@ -279,7 +279,7 @@ PHASE 1 consists of two independent sub-phases to provide flexible workflow base
 │                    ↓                                        │
 │  Phase B (REQUIRED)                                         │
 │  ┌─────────────────────────────────────────┐               │
-│  │ ⚙ manager-spec Agent                   │               │
+│  │ ⚙ general-purpose Agent (SPEC Expert)  │               │
 │  │ • Analyze project documents             │               │
 │  │ • Propose SPEC candidates               │               │
 │  │ • Design EARS structure                 │               │
@@ -346,7 +346,7 @@ Report back:
 - Technical constraints and dependencies
 - Recommendations for user clarification
 
-Return comprehensive results to guide manager-spec agent.
+Return comprehensive results to guide general-purpose agent (acting as SPEC Expert).
 
 Phase 1A Completion:
 
@@ -365,9 +365,9 @@ Decision Logic: If user provided clear SPEC title (like "Add authentication modu
 
 ###  PHASE 1B: SPEC Planning (Required)
 
-#### Step 1B.1: Invoke manager-spec for project analysis
+#### Step 1B.1: Invoke general-purpose (as SPEC Expert) for project analysis
 
-Use the manager-spec subagent to:
+Use the general-purpose subagent (acting as SPEC Expert) to:
 
 Analyze project and create SPEC plan for: $ARGUMENTS
 
@@ -439,7 +439,7 @@ Phase 1B Completion:
 
 #### Step 1B.2: Request user approval
 
-After the manager-spec presents the implementation plan report, use AskUserQuestion tool for explicit approval:
+After the general-purpose agent (acting as SPEC Expert) presents the implementation plan report, use AskUserQuestion tool for explicit approval:
 
 Tool: AskUserQuestion
 Parameters:
@@ -526,8 +526,8 @@ IF user selected "Detailed Revision":
 
 1. Ask the user: "What changes would you like to make to the plan?"
 2. Collect user's feedback via AskUserQuestion
-3. Pass feedback to manager-spec agent
-4. manager-spec updates the plan
+3. Pass feedback to general-purpose agent (acting as SPEC Expert)
+4. general-purpose agent updates the plan
 5. Return to Step 3.5 (request approval again with updated plan)
 
 IF user selected "Save as Draft":
@@ -593,9 +593,9 @@ Verification output must include:
   WHY: Three or more domains indicate scope creep and mixed concerns
   IMPACT: Complex domain names signal SPECs that should be split
 
-### Step 1: Invoke manager-spec for SPEC creation
+### Step 1: Invoke general-purpose (as SPEC Expert) for SPEC creation
 
-Use the manager-spec subagent to:
+Use the general-purpose subagent (acting as SPEC Expert) to:
 
 Create SPEC document files for approved plan
 
@@ -957,8 +957,8 @@ if has_worktree_flag:
         print(f"\n SPEC created: SPEC-{SPEC_ID}")
         print(f" Worktree created: {worktree_info.path}")
         print(f"\n Next steps:")
-        print(f"  1. Switch to worktree: moai-workflow-worktree switch SPEC-{SPEC_ID}")
-        print(f"  2. Or use shell eval: eval $(moai-workflow-worktree go SPEC-{SPEC_ID})")
+        print(f"  1. Switch to worktree: moai-worktree switch SPEC-{SPEC_ID}")
+        print(f"  2. Or use shell eval: eval $(moai-worktree go SPEC-{SPEC_ID})")
         print(f"  3. Then run: /moai:2-run SPEC-{SPEC_ID}")
 
     except Exception as e:
@@ -966,7 +966,7 @@ if has_worktree_flag:
         print(f"\n Worktree creation failed: {e}")
         print(f" SPEC created: SPEC-{SPEC_ID}")
         print(f" You can manually create worktree later with:")
-        print(f"   moai-workflow-worktree new SPEC-{SPEC_ID}")
+        print(f"   moai-worktree new SPEC-{SPEC_ID}")
 ```
 
 Expected Success Outcome:
@@ -976,8 +976,8 @@ Expected Success Outcome:
  Worktree created: ~/worktrees/MoAI-ADK/SPEC-AUTH-001
 
  Next steps:
-  1. Switch to worktree: moai-workflow-worktree switch SPEC-AUTH-001
-  2. Or use shell eval: eval $(moai-workflow-worktree go SPEC-AUTH-001)
+  1. Switch to worktree: moai-worktree switch SPEC-AUTH-001
+  2. Or use shell eval: eval $(moai-worktree go SPEC-AUTH-001)
   3. Then run: /moai:2-run SPEC-AUTH-001
 ```
 
@@ -1195,8 +1195,8 @@ Would you like to enable automatic branch creation for future SPEC creations?
 - Status: Ready for parallel development
 
  Next Steps:
-1.  Switch to worktree: `moai-workflow-worktree switch SPEC-{SPEC_ID}`
-2.  Or use shell eval: `eval $(moai-workflow-worktree go SPEC-{SPEC_ID})`
+1.  Switch to worktree: `moai-worktree switch SPEC-{SPEC_ID}`
+2.  Or use shell eval: `eval $(moai-worktree go SPEC-{SPEC_ID})`
 3.  Review SPEC documents in worktree: `.moai/specs/SPEC-{SPEC_ID}/`
 4.  Execute `/moai:2-run SPEC-{SPEC_ID}` to begin TDD implementation
 5.  Work on isolated environment without affecting other SPECs
@@ -1247,10 +1247,10 @@ IMPACT: Unstructured output prevents downstream automation and creates manual ov
 
 Before you consider this command complete, verify:
 
-- [ ] PHASE 1 executed: manager-spec analyzed project and proposed SPEC candidates
+- [ ] PHASE 1 executed: general-purpose agent (acting as SPEC Expert) analyzed project and proposed SPEC candidates
 - [ ] Progress report displayed: User shown detailed progress report with analysis results
 - [ ] User approval obtained: User explicitly approved SPEC creation (via enhanced AskUserQuestion)
-- [ ] PHASE 2 executed: manager-spec created all 3 SPEC files (spec.md, plan.md, acceptance.md)
+- [ ] PHASE 2 executed: general-purpose agent (acting as SPEC Expert) created all 3 SPEC files (spec.md, plan.md, acceptance.md)
 - [ ] Directory naming correct: `.moai/specs/SPEC-{ID}/` format followed
 - [ ] YAML frontmatter valid: All 7 required fields present
 - [ ] HISTORY section present: Immediately after YAML frontmatter
@@ -1292,8 +1292,8 @@ Basic Worktree Creation:
 #  Worktree created: ~/worktrees/MoAI-ADK/SPEC-AUTH-001
 #
 #  Next steps:
-#   1. Switch to worktree: moai-workflow-worktree switch SPEC-AUTH-001
-#   2. Or use shell eval: eval $(moai-workflow-worktree go SPEC-AUTH-001)
+#   1. Switch to worktree: moai-worktree switch SPEC-AUTH-001
+#   2. Or use shell eval: eval $(moai-worktree go SPEC-AUTH-001)
 ```
 
 Interactive Environment Selection:
@@ -1309,14 +1309,14 @@ Interactive Environment Selection:
 Associated Agents & Components:
 
 - `Explore` - Project exploration and file discovery (Phase 1A, optional)
-- `manager-spec` - SPEC planning and document creation (Phase 1B-2, required)
+- `general-purpose` (acting as SPEC Expert) - SPEC planning and document creation (Phase 1B-2, required)
 - `manager-git` - Branch and PR creation (Phase 3, conditional)
 - WorktreeManager - Worktree creation and management (Phase 3, when --worktree flag used)
 
 Key Integration Points:
 
 - WorktreeManager Import: `from moai_adk.cli.worktree.manager import WorktreeManager`
-- Worktree Registry: Automatic registration in `~/worktrees/MoAI-ADK/.moai-workflow-worktree-registry.json`
+- Worktree Registry: Automatic registration in `~/worktrees/DesignWorkflow/.moai-worktree-registry.json`
 - Git Integration: Creates feature branch `feature/SPEC-{ID}` and associated worktree
 - Error Handling: Graceful fallback if worktree creation fails
 
@@ -1357,15 +1357,15 @@ Status:  COMPLETE - Full integration achieved on 2025-11-28
  Worktree created: ~/worktrees/MoAI-ADK/SPEC-AUTH-001
 
  Next steps:
-  1. Switch to worktree: moai-workflow-worktree switch SPEC-AUTH-001
-  2. Or use shell eval: eval $(moai-workflow-worktree go SPEC-AUTH-001)
+  1. Switch to worktree: moai-worktree switch SPEC-AUTH-001
+  2. Or use shell eval: eval $(moai-worktree go SPEC-AUTH-001)
   3. Then run: /moai:2-run SPEC-AUTH-001
 ```
 
 ### Integration Points
 
 - Import: `from moai_adk.cli.worktree.manager import WorktreeManager`
-- Worktree Registry: Automatic registration in `~/worktrees/MoAI-ADK/.moai-workflow-worktree-registry.json`
+- Worktree Registry: Automatic registration in `~/worktrees/DesignWorkflow/.moai-worktree-registry.json`
 - Branch Creation: Creates feature branch `feature/SPEC-{SPEC_ID}` automatically
 - Documentation: Updated all examples, checklists, and status reports
 
@@ -1423,5 +1423,5 @@ Important:
 You must NOW execute the command following the "The 4-Step Agent-Based Workflow Command Logic" described above.
 
 1. Start PHASE 1: Project Analysis & SPEC Planning immediately.
-2. Use the manager-spec subagent (or Explore subagent as appropriate).
+2. Use the general-purpose subagent (acting as SPEC Expert, or Explore subagent as appropriate).
 3. Do NOT just describe what you will do. DO IT.

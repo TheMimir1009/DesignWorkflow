@@ -1,7 +1,7 @@
 ---
 name: moai:0-project
 description: "Initialize project metadata and documentation"
-argument-hint: "[<empty>|setting|update|--glm-on <token>]"
+argument-hint: "[<empty>|setting|update|--glm-on <token>|--glm-off]"
 allowed-tools: Read, Write, Edit, Grep, Glob, WebFetch, WebSearch, Bash, TodoWrite, AskUserQuestion, Task, Skill
 model: inherit
 ---
@@ -30,7 +30,7 @@ Correct Pattern: Command collects user input via AskUserQuestion BEFORE delegati
 
 Architecture: Commands delegate to Agents, which coordinate Skills. This command orchestrates exclusively through Task() tool.
 
-Delegation Model: Complete agent-first pattern. All execution delegated to manager-project agent. Agents receive pre-collected user choices and execute without further user interaction.
+Delegation Model: Agent-first pattern using general-purpose subagent with Project Manager role instructions. Agents receive pre-collected user choices and execute without further user interaction.
 
 Workflow Integration: This command implements Step 0 of Alfred's three-step execution model (Understand-Plan-Execute). See CLAUDE.md for complete workflow details.
 
@@ -45,6 +45,7 @@ AUTO-DETECT Mode: Existing projects with optional modification or re-initializat
 SETTINGS Mode: Interactive tab-based configuration management with validation
 UPDATE Mode: Template optimization after moai-adk package update
 GLM Configuration Mode: GLM API integration setup via --glm-on parameter
+GLM Deactivation Mode: Restore Claude models via --glm-off parameter
 
 WHY: Multi-mode design accommodates diverse user scenarios from fresh installs to updates.
 
@@ -56,7 +57,7 @@ IMPACT: Users can navigate project lifecycle without manual intervention.
 
 The following agents and skills support this command:
 
-manager-project agent orchestrates language-first initialization and configuration workflows.
+general-purpose agent (acting as Project Manager) orchestrates language-first initialization and configuration workflows.
 
 moai-workflow-project skill provides unified project management including language initialization, atomic config operations, template merging, and tab-based batch question execution.
 
@@ -168,7 +169,7 @@ Command implements sequential chaining through 3 main phases:
 Phase Flow:
 - Phase 1: Mode Detection & Language Configuration (determines operation mode and loads language)
 - Phase 2: User Intent Collection (gathers project metadata and preferences via AskUserQuestion)
-- Phase 3: Configuration & Documentation Generation (manager-project generates all project files)
+- Phase 3: Configuration & Documentation Generation (general-purpose agent generates all project files)
 
 Each phase receives outputs from previous phases as context.
 
@@ -211,17 +212,17 @@ Refer to CLAUDE.md "Agent Chaining Patterns" (lines 96-120) for complete pattern
 
 The project setup follows explicit delegation pattern: Understand the user intent, Plan the execution, Execute through specialized agents.
 
-The command delegates all functional work to manager-project agent through Task() invocation.
+The command delegates all functional work to general-purpose agent through Task() invocation with explicit Project Manager role instructions.
 
 The command maintains zero direct tool usage except for Task() orchestration and AskUserQuestion() user interaction.
 
 [HARD] Tool Usage Restrictions:
 
-- DO NOT use Read for file operations (delegated to manager-project)
-- DO NOT use Write for file operations (delegated to manager-project)
-- DO NOT use Edit for file modifications (delegated to manager-project)
-- DO NOT use Bash for command execution (delegated to manager-project)
-- DO NOT use TodoWrite for task management (delegated to manager-project)
+- DO NOT use Read for file operations (delegated to general-purpose agent)
+- DO NOT use Write for file operations (delegated to general-purpose agent)
+- DO NOT use Edit for file modifications (delegated to general-purpose agent)
+- DO NOT use Bash for command execution (delegated to general-purpose agent)
+- DO NOT use TodoWrite for task management (delegated to general-purpose agent)
 - DO use Task() for agent orchestration
 - DO use AskUserQuestion() for user interaction
 
@@ -229,7 +230,7 @@ WHY: Delegation enables specialized agent tool access and consistent execution c
 
 IMPACT: Direct tool usage would bypass agent expertise and validation layers.
 
-Manager-project agent handles all implementation complexity including file operations, configuration management, and validation logic.
+General-purpose agent (with Project Manager role) handles all implementation complexity including file operations, configuration management, and validation logic.
 
 ---
 
@@ -253,6 +254,11 @@ GLM Configuration: Command includes --glm-on with optional API token
 - If token missing: Attempt auto-load from ANTHROPIC_AUTH_TOKEN environment variable
 - If all sources missing: Request token from user via AskUserQuestion
 
+GLM Deactivation: Command includes --glm-off
+- Route to GLM_DEACTIVATION mode
+- Save current GLM config to _glm_deactivated metadata
+- Restore latest Claude models
+
 SETTINGS Mode: Command includes setting argument
 - Always use interactive tab selection via AskUserQuestion
 - User selects specific tab or "Modify All Tabs" option
@@ -273,15 +279,15 @@ WHY: Argument-driven routing prevents mode confusion.
 
 IMPACT: Ambiguous routing leads to wrong workflow execution.
 
-### Step 2: Delegate to Manager-Project Agent
+### Step 2: Delegate to General-Purpose Agent
 
-[HARD] Invoke manager-project subagent with detected mode and context.
+[HARD] Invoke general-purpose subagent with detected mode and context, acting as Project Manager.
 
 WHY: Specialized agent handles mode-specific complexity.
 
 IMPACT: Direct execution would bypass validation and expertise layers.
 
-Pass the following context to manager-project agent:
+Pass the following context to general-purpose agent:
 
 - Detected Mode value (INITIALIZATION, AUTO-DETECT, SETTINGS, UPDATE, or GLM_CONFIGURATION)
 - Language Context read from .moai/config/config.yaml if present
@@ -340,6 +346,19 @@ For GLM_CONFIGURATION:
 - Verify .gitignore includes .env.glm entry
 - Report GLM configuration success to user with all configured keys
 - Remind user: "Restart Claude Code to automatically load the new settings"
+
+For GLM_DEACTIVATION (--glm-off):
+
+- Save current GLM configuration to `_glm_deactivated` metadata for potential restoration
+- Restore Claude models with LATEST versions:
+  - ANTHROPIC_DEFAULT_HAIKU_MODEL: claude-3-5-haiku-20241022
+  - ANTHROPIC_DEFAULT_SONNET_MODEL: claude-3-5-sonnet-20241022
+  - ANTHROPIC_DEFAULT_OPUS_MODEL: claude-opus-4-5-20251101
+- Remove GLM-specific environment variables (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN from env)
+- Execute GLM deactivation script: `uv run .moai/scripts/setup-glm.py --off`
+- Verify configuration restored to official Claude models in .claude/settings.local.json
+- Report GLM deactivation success with restored model information
+- Remind user: "Restart Claude Code to load the restored Claude settings"
 
 Output: Mode-specific completion report with next steps
 
@@ -554,15 +573,15 @@ Loop until user selects "Approve and Continue"
 
 Store approval in: $USER_APPROVAL
 
-### Step 5: Delegate to Manager-Project Agent
+### Step 5: Delegate to General-Purpose Agent
 
-[HARD] After user approval, invoke manager-project agent with complete context.
+[HARD] After user approval, invoke general-purpose agent with complete context and Project Manager role.
 
 WHY: Agent receives all necessary information to generate files without further user interaction.
 
 IMPACT: Missing context would force agent to make assumptions or fail.
 
-Pass to manager-project via Task():
+Pass to general-purpose agent via Task():
 
 - Mode: INITIALIZATION
 - Language: User's conversation_language
@@ -586,9 +605,9 @@ Output: Complete project initialization with documentation
 
 Goal: Execute the appropriate mode based on routing decision.
 
-### Mode Handler: manager-project Agent
+### Mode Handler: General-Purpose Agent
 
-The manager-project agent handles all mode-specific workflows:
+The general-purpose agent (acting as Project Manager) handles all mode-specific workflows:
 
 INITIALIZATION MODE:
 
@@ -731,7 +750,7 @@ Tab 2: Project Settings (Recommended)
 - Batch 2.2: Auto-processed locale settings (0 questions - internal analysis only)
   - project.locale, default_language, optimized_for_language (auto-determined from conversation_language)
   - NOTE: No user input needed. These 3 fields update automatically when conversation_language changes
-  - Auto-Processing Delegation: Command does NOT perform auto-processing. manager-project agent receives user selections, determines derived fields, then delegates atomic update to UnifiedConfigManager skill.
+  - Auto-Processing Delegation: Command does NOT perform auto-processing. general-purpose agent receives user selections, determines derived fields, then delegates atomic update to UnifiedConfigManager skill.
 - Setting count: 2
 
 Tab 3: Git Strategy & Workflow (Recommended with Validation - REDESIGNED v2.0.0)
@@ -904,7 +923,7 @@ UnifiedConfigManager Responsibilities:
 User runs: `/moai:0-project setting tab_1_user_language`
 
 ```
-Step 1: Project-manager loads tab schema
+Step 1: General-purpose agent (acting as Project Manager) loads tab schema
 Step 2: Extracts Tab 1 (tab_1_user_language)
 Step 3: Gets Batch 1.1 (基本設定)
 Step 4: Loads current values from config.yaml including extended language settings:
@@ -1086,16 +1105,16 @@ Goal: Persist phase execution results for explicit context passing to subsequent
 
 ### Step 1: Extract Context from Agent Response
 
-After manager-project agent completes, extract the following information:
+After general-purpose agent completes, extract the following information:
 
 - Project metadata: name, description, language
 - Files created: List of generated files with absolute paths
 - Tech stack: Primary codebase language
 - Next phase: Recommended next command (1-plan)
 
-### Step 2: Delegate Context Saving to manager-project
+### Step 2: Delegate Context Saving to general-purpose agent
 
-The manager-project agent handles all context saving:
+The general-purpose agent (acting as Project Manager) handles all context saving:
 
 ```markdown
 Context data to persist:
@@ -1186,7 +1205,7 @@ WHY: Announcements should reflect user's selected language.
 
 ### Agent Delegation
 
-[HARD] Delegate ALL execution to manager-project agent.
+[HARD] Delegate ALL execution to general-purpose agent with Project Manager role instructions.
 
 WHY: Agent provides specialized expertise and validation.
 
@@ -1246,7 +1265,7 @@ Prohibited Direct Tools:
 - NO Bash for command execution
 - NO TodoWrite for task management
 
-All tool-based operations delegate to manager-project agent.
+All tool-based operations delegate to general-purpose agent (acting as Project Manager).
 
 ### Configuration Management
 
@@ -1280,8 +1299,8 @@ Example: "Detected AUTO-DETECT mode, user language is Korean (ko), existing conf
 </analysis>
 
 <approach>
-Execution strategy selected based on analysis, including manager-project agent invocation parameters.
-Example: "Delegating to manager-project agent with AUTO-DETECT mode context, language: ko, requesting settings review"
+Execution strategy selected based on analysis, including general-purpose agent invocation parameters.
+Example: "Delegating to general-purpose agent with AUTO-DETECT mode context and Project Manager role, language: ko, requesting settings review"
 </approach>
 
 <phase>
@@ -1382,5 +1401,5 @@ Important:
 You must NOW execute the command following the "Execution Philosophy" described above.
 
 1. Analyze the subcommand/context.
-2. Use the manager-project subagent to handle project setup.
+2. Use the general-purpose subagent with Project Manager role to handle project setup.
 3. Do NOT just describe what you will do. DO IT.
