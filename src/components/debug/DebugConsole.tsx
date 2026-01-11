@@ -16,11 +16,12 @@ import { LogDetailModal } from './LogDetailModal';
 
 export function DebugConsole() {
   // REQ-W-001: System must not display Debug Console in production
+  // Hooks must be called unconditionally at the top level
+  const { logs } = useDebugStore();
+
   if (!isDebugConsoleAccessible()) {
     return null;
   }
-
-  const { logs } = useDebugStore();
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900">

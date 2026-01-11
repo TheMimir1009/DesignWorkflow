@@ -5,6 +5,7 @@
  */
 
 import { useDebugStore } from '../../store/debugStore';
+import type { DebugFilters } from '../../types/debug';
 
 export function DebugFilters() {
   const { filters, setFilters, logs } = useDebugStore();
@@ -13,7 +14,7 @@ export function DebugFilters() {
   const models = Array.from(new Set(logs.map((log) => log.model))).sort();
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFilters({ status: e.target.value as any });
+    setFilters({ status: e.target.value as DebugFilters['status'] });
   };
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

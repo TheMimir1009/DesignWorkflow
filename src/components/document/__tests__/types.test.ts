@@ -63,14 +63,7 @@ describe('SaveStatus Type', () => {
     });
 
     it('should be usable in const assertions', () => {
-      const statuses = {
-        saved: 'saved' as const,
-        saving: 'saving' as const,
-        error: 'error' as const,
-        unsaved: 'unsaved' as const,
-      } as const;
-
-      type StatusValues = typeof statuses[keyof typeof statuses];
+      type StatusValues = 'saved' | 'saving' | 'error' | 'unsaved';
       const status: StatusValues = 'saved';
 
       expect(status).toBe('saved');
@@ -98,10 +91,11 @@ describe('SaveStatus Type', () => {
             return 'Error';
           case 'unsaved':
             return 'Unsaved changes';
-          default:
+          default: {
             // TypeScript should ensure this is unreachable
-            const exhaustiveCheck: never = status;
-            return exhaustiveCheck;
+            const _exhaustiveCheck: never = status;
+            return _exhaustiveCheck;
+          }
         }
       };
 
@@ -114,10 +108,9 @@ describe('SaveStatus Type', () => {
 
   describe('Type Inference', () => {
     it('should infer type from array', () => {
-      const statuses = ['saved', 'saving', 'error', 'unsaved'] as const;
-      type InferredStatus = (typeof statuses)[number];
+      const _statuses = ['saved', 'saving', 'error', 'unsaved'] as const;
 
-      const status: SaveStatus = statuses[0];
+      const status: SaveStatus = _statuses[0];
       expect(status).toBe('saved');
     });
 
@@ -143,7 +136,10 @@ describe('SaveStatus Type', () => {
     it('should be usable in existing component patterns', () => {
       // Simulate existing component usage patterns
       const useSaveStatus = () => {
-        return ['saved' as SaveStatus, (s: SaveStatus) => {}] as const;
+        const setStatus = () => {
+          // Placeholder for status setter
+        };
+        return ['saved' as SaveStatus, setStatus] as const;
       };
 
       const [status, setStatus] = useSaveStatus();
@@ -166,15 +162,19 @@ describe('SaveStatus Type', () => {
     });
 
     it('should have consistent type across multiple imports', async () => {
-      const [typesModule, editorModule] = await Promise.all([
+      await Promise.all([
         import('../types'),
         import('../EnhancedDocumentEditor'),
       ]);
 
-      const typesSaveStatus: typeof typesModule.SaveStatus = 'saved';
-      const editorSaveStatus: typeof editorModule.SaveStatus = typesSaveStatus;
+      // Type check at compile time
+      type TypesSaveStatus = typeof import('../types').SaveStatus;
+      type EditorSaveStatus = typeof import('../EnhancedDocumentEditor').SaveStatus;
 
-      expect(editorSaveStatus).toBe('saved');
+      const status: TypesSaveStatus = 'saved';
+      const editorStatus: EditorSaveStatus = status;
+
+      expect(editorStatus).toBe('saved');
     });
   });
 });

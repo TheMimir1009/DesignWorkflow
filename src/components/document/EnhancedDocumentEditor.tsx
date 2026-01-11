@@ -14,11 +14,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
-import { languages } from '@codemirror/language';
 import { lineNumbers, highlightActiveLineGutter, keymap } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
+import { LanguageDescription } from '@codemirror/language';
+import { javascript } from '@codemirror/lang-javascript';
+import { html } from '@codemirror/lang-html';
+import { css } from '@codemirror/lang-css';
+import { python } from '@codemirror/lang-python';
+import { json } from '@codemirror/lang-json';
 import { SaveStatusIndicator } from './SaveStatusIndicator';
 import type { SaveStatus } from './types';
 
@@ -128,7 +133,17 @@ export function EnhancedDocumentEditor({
         if (!isLastAttempt) {
           retryConfig.currentAttempt++;
           setTimeout(() => {
-            performSave(contentToSave);
+            // Retry the save operation
+            onSave(contentToSave)
+              .then(() => {
+                updateSaveStatus('saved');
+                setLastSavedTime(new Date());
+                setErrorMessage('');
+                retryConfigRef.current.currentAttempt = 0;
+              })
+              .catch((retryError) => {
+                updateSaveStatus('error', retryError instanceof Error ? retryError.message : 'Save failed');
+              });
           }, retryConfig.retryDelay);
         }
       }
@@ -166,16 +181,6 @@ export function EnhancedDocumentEditor({
     },
     [scheduleSave]
   );
-
-  /**
-   * Manual save handler (triggered by Ctrl+S)
-   */
-  const handleManualSave = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    performSave(contentRef.current);
-  }, [performSave]);
 
   /**
    * Insert markdown formatting around selection
@@ -219,9 +224,21 @@ export function EnhancedDocumentEditor({
   }, []);
 
   /**
-   * Keyboard shortcut extensions
+   * Manual save handler (triggered by Ctrl+S)
    */
-  const keyboardExtensions = useCallback(() => {
+  const handleManualSave = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    performSave(contentRef.current);
+  }, [performSave]);
+
+  /**
+   * Keyboard shortcut extensions
+   * Using useMemo to calculate extensions based on dependencies
+   */
+  /* eslint-disable react-hooks/refs -- Ref access happens in keymap run callback, not during render */
+  const keyboardExtensions = useMemo(() => {
     if (readOnly) return [];
 
     return [
@@ -264,6 +281,7 @@ export function EnhancedDocumentEditor({
       ]),
     ];
   }, [readOnly, handleManualSave, insertMarkdownFormatting, insertCodeBlock]);
+  /* eslint-enable react-hooks/refs */
 
   /**
    * Cleanup on unmount
@@ -294,7 +312,54 @@ export function EnhancedDocumentEditor({
         value={content}
         height="100%"
         extensions={[
-          markdown({ codeLanguages: languages }),
+          markdown({ codeLanguages: [
+            LanguageDescription.of({
+              name: 'javascript',
+              alias: ['js', 'ecmascript'],
+              extensions: ['js', 'mjs', 'cjs'],
+              load: async () => javascript(),
+            }),
+            LanguageDescription.of({
+              name: 'typescript',
+              alias: ['ts'],
+              extensions: ['ts'],
+              load: async () => javascript({ typescript: true }),
+            }),
+            LanguageDescription.of({
+              name: 'jsx',
+              alias: ['react'],
+              extensions: ['jsx'],
+              load: async () => javascript({ jsx: true }),
+            }),
+            LanguageDescription.of({
+              name: 'tsx',
+              alias: ['typescript-react'],
+              extensions: ['tsx'],
+              load: async () => javascript({ jsx: true, typescript: true }),
+            }),
+            LanguageDescription.of({
+              name: 'html',
+              alias: ['xhtml'],
+              extensions: ['html', 'htm'],
+              load: async () => html(),
+            }),
+            LanguageDescription.of({
+              name: 'css',
+              extensions: ['css'],
+              load: async () => css(),
+            }),
+            LanguageDescription.of({
+              name: 'python',
+              alias: ['py', 'python3', 'py3'],
+              extensions: ['py', 'py3'],
+              load: async () => python(),
+            }),
+            LanguageDescription.of({
+              name: 'json',
+              extensions: ['json'],
+              load: async () => json(),
+            }),
+          ] }),
           lineNumbers(),
           highlightActiveLineGutter(),
           oneDark,
@@ -306,7 +371,7 @@ export function EnhancedDocumentEditor({
               outline: 'none',
             },
           }),
-          ...keyboardExtensions(),
+          ...keyboardExtensions,
           EditorView.lineWrapping,
           readOnly ? EditorState.readOnly.of(true) : [],
         ]}
