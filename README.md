@@ -4,7 +4,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 
 ## Project Progress
 
-**Current Progress: 100%**
+**Current Progress: 100%** (17 features completed)
 
 ### Completed Features
 
@@ -25,6 +25,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Document Reference Panel UI (SPEC-DOCREF-002)
 - AI Model History Recording (SPEC-MODELHISTORY-001)
 - Circular Dependency Fix (SPEC-DOCEDIT-002)
+- Agent Refactoring for Claude Code Integration (SPEC-AGENT-001)
 
 ### In Progress Features
 
