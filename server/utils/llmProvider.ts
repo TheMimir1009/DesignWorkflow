@@ -1,6 +1,7 @@
 /**
  * LLM Provider Factory
  * Creates LLM provider instances based on configuration
+ * Supports shared logging for debug mode
  */
 
 import type { LLMProvider, LLMProviderSettings } from '../../src/types/llm';
@@ -12,13 +13,60 @@ import {
   ClaudeCodeProvider,
 } from './llmProviders';
 import { decryptApiKey, isEncrypted } from './encryption';
+import { LLMLogger } from './llmLogger';
+import type { LLMLogEntry } from './llmLogger';
+import { calculateCost } from './modelPricing';
+
+/**
+ * Global shared logger instance for LLM API calls
+ * Used when debug mode is enabled
+ */
+let sharedLogger: LLMLogger | null = null;
+
+/**
+ * Get or create the shared logger instance
+ */
+export function getSharedLogger(): LLMLogger {
+  if (!sharedLogger) {
+    sharedLogger = new LLMLogger();
+  }
+  return sharedLogger;
+}
+
+/**
+ * Set a custom shared logger instance
+ */
+export function setSharedLogger(logger: LLMLogger): void {
+  sharedLogger = logger;
+}
+
+/**
+ * Clear the shared logger instance and reset logs
+ */
+export function clearSharedLogger(): void {
+  if (sharedLogger) {
+    sharedLogger.clearLogs();
+  }
+  sharedLogger = null;
+}
+
+/**
+ * Get logs from the shared logger
+ */
+export function getSharedLogs(): LLMLogEntry[] {
+  return sharedLogger ? sharedLogger.getLogs() : [];
+}
 
 /**
  * Create an LLM provider instance based on settings
  * @param settings - Provider settings including API key and endpoint
+ * @param useSharedLogger - Whether to use the shared logger for debug mode
  * @returns LLM provider instance
  */
-export function createLLMProvider(settings: LLMProviderSettings): LLMProviderInterface {
+export function createLLMProvider(
+  settings: LLMProviderSettings,
+  useSharedLogger: boolean = false
+): LLMProviderInterface {
   // Decrypt API key if encrypted
   const apiKey = settings.apiKey && isEncrypted(settings.apiKey)
     ? decryptApiKey(settings.apiKey)
@@ -27,6 +75,7 @@ export function createLLMProvider(settings: LLMProviderSettings): LLMProviderInt
   const config = {
     apiKey,
     endpoint: settings.endpoint,
+    logger: useSharedLogger ? getSharedLogger() : undefined,
   };
 
   switch (settings.provider) {
@@ -54,23 +103,29 @@ export function createLLMProvider(settings: LLMProviderSettings): LLMProviderInt
 export function createProviderById(
   providerId: LLMProvider,
   apiKey?: string,
-  endpoint?: string
+  endpoint?: string,
+  useSharedLogger: boolean = false
 ): LLMProviderInterface {
-  return createLLMProvider({
-    provider: providerId,
-    apiKey: apiKey || '',
-    endpoint,
-    isEnabled: true,
-    connectionStatus: 'untested',
-  });
+  return createLLMProvider(
+    {
+      provider: providerId,
+      apiKey: apiKey || '',
+      endpoint,
+      isEnabled: true,
+      connectionStatus: 'untested',
+    },
+    useSharedLogger
+  );
 }
 
 /**
  * Get the default provider (Claude Code)
  * Always available as fallback
  */
-export function getDefaultProvider(): LLMProviderInterface {
-  return new ClaudeCodeProvider();
+export function getDefaultProvider(useSharedLogger: boolean = false): LLMProviderInterface {
+  return new ClaudeCodeProvider(
+    useSharedLogger ? { logger: getSharedLogger() } : undefined
+  );
 }
 
 /**

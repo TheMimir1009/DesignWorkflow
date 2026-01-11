@@ -71,7 +71,8 @@ export class OpenAIProvider extends BaseHTTPProvider {
           temperature: config.temperature,
           max_tokens: config.maxTokens,
           top_p: config.topP,
-        }
+        },
+        config // Pass config for logging
       );
 
       const content = response.choices[0]?.message?.content || '';

@@ -5,6 +5,8 @@
 
 import type { LLMModelConfig, LLMResult, ConnectionTestResult } from '../../../src/types/llm';
 import { BaseHTTPProvider, type ProviderConfig } from './base';
+import { extractTokenUsage } from '../tokenExtractor';
+import { calculateCost } from '../modelPricing';
 
 const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -62,18 +64,22 @@ export class GeminiProvider extends BaseHTTPProvider {
       // Gemini uses different endpoint structure
       const url = `${this.endpoint}/models/${config.modelId}:generateContent?key=${this.apiKey}`;
 
-      const response = await this.makeGeminiRequest<GeminiGenerateResponse>(url, {
-        contents: [
-          {
-            parts: [{ text: prompt }],
+      const response = await this.makeGeminiRequest<GeminiGenerateResponse>(
+        url,
+        {
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: config.temperature,
+            maxOutputTokens: config.maxTokens,
+            topP: config.topP,
           },
-        ],
-        generationConfig: {
-          temperature: config.temperature,
-          maxOutputTokens: config.maxTokens,
-          topP: config.topP,
         },
-      });
+        config // Pass config for logging
+      );
 
       const content = response.candidates[0]?.content?.parts[0]?.text || '';
 
@@ -153,8 +159,32 @@ export class GeminiProvider extends BaseHTTPProvider {
 
   /**
    * Make Gemini-specific request (uses query param for API key)
+   * Includes logging integration
    */
-  private async makeGeminiRequest<T>(url: string, body: unknown, timeoutMs: number = 120000): Promise<T> {
+  private async makeGeminiRequest<T>(
+    url: string,
+    body: unknown,
+    config: LLMModelConfig,
+    timeoutMs: number = 120000
+  ): Promise<T> {
+    const requestId = this.generateRequestId();
+    const startTime = Date.now();
+
+    // Log request before API call
+    this.logger.logRequest({
+      id: requestId,
+      provider: this.provider,
+      model: config.modelId,
+      request: {
+        prompt: this.truncatePrompt(body),
+        parameters: {
+          temperature: config.temperature,
+          maxTokens: config.maxTokens,
+          topP: config.topP,
+        },
+      },
+    });
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -170,10 +200,66 @@ export class GeminiProvider extends BaseHTTPProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        const error = new Error(`HTTP ${response.status}: ${errorText}`);
+
+        // Log error
+        this.logger.logError({
+          id: requestId,
+          error: {
+            message: error.message,
+            code: response.status.toString(),
+          },
+        });
+
+        throw error;
       }
 
-      return await response.json() as T;
+      const data = await response.json() as T;
+      const endTime = Date.now();
+      const durationMs = endTime - startTime;
+
+      // Extract token usage and log response
+      const tokenUsage = extractTokenUsage(this.provider, data);
+      if (tokenUsage) {
+        const estimatedCost = calculateCost(
+          this.provider,
+          config.modelId,
+          tokenUsage.prompt_tokens,
+          tokenUsage.completion_tokens
+        );
+
+        this.logger.logResponse({
+          id: requestId,
+          response: {
+            usage: tokenUsage,
+          },
+          metrics: {
+            duration_ms: durationMs,
+            estimated_cost: estimatedCost > 0 ? estimatedCost : undefined,
+          },
+        });
+      } else {
+        // Log response without token usage
+        this.logger.logResponse({
+          id: requestId,
+          metrics: {
+            duration_ms: endTime - startTime,
+          },
+        });
+      }
+
+      return data;
+    } catch (error) {
+      // Log error if not already logged
+      if (error instanceof Error) {
+        this.logger.logError({
+          id: requestId,
+          error: {
+            message: error.message,
+          },
+        });
+      }
+      throw error;
     } finally {
       clearTimeout(timeoutId);
     }

@@ -6,6 +6,7 @@
 import type { LLMModelConfig, LLMResult, ConnectionTestResult } from '../../../src/types/llm';
 import type { LLMProviderInterface, ProviderConfig } from './base';
 import { callClaudeCode, ClaudeCodeError, ClaudeCodeTimeoutError } from '../claudeCodeRunner';
+import { LLMLogger } from '../llmLogger';
 
 /**
  * Claude Code Provider
@@ -14,20 +15,41 @@ import { callClaudeCode, ClaudeCodeError, ClaudeCodeTimeoutError } from '../clau
  */
 export class ClaudeCodeProvider implements LLMProviderInterface {
   readonly provider = 'claude-code' as const;
+  private logger: LLMLogger;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(_config?: ProviderConfig) {
     // Claude Code doesn't need configuration - uses CLI
+    this.logger = new LLMLogger();
   }
 
   async generate(prompt: string, config: LLMModelConfig, workingDir?: string): Promise<LLMResult> {
     const effectiveWorkingDir = workingDir || process.cwd();
+    const requestId = this.generateRequestId();
+    const startTime = Date.now();
+
+    // Log request
+    this.logger.logRequest({
+      id: requestId,
+      provider: this.provider,
+      model: config.modelId || 'claude-3.5-sonnet',
+      request: {
+        prompt: this.truncatePrompt(prompt),
+        parameters: {
+          timeout: 180000,
+          allowedTools: ['Read', 'Grep'],
+        },
+      },
+    });
 
     try {
       const result = await callClaudeCode(prompt, effectiveWorkingDir, {
         timeout: 180000, // 3 minutes for document generation
         allowedTools: ['Read', 'Grep'], // Read-only for generation
       });
+
+      const endTime = Date.now();
+      const durationMs = endTime - startTime;
 
       // Extract content from result
       let content: string;
@@ -41,6 +63,17 @@ export class ClaudeCodeProvider implements LLMProviderInterface {
         content = result.rawOutput;
       }
 
+      // Log response (ClaudeCode doesn't provide token usage)
+      this.logger.logResponse({
+        id: requestId,
+        response: {
+          content: content.substring(0, 200), // Truncate for logging
+        },
+        metrics: {
+          duration_ms: durationMs,
+        },
+      });
+
       return {
         success: true,
         content,
@@ -49,6 +82,17 @@ export class ClaudeCodeProvider implements LLMProviderInterface {
         model: config.modelId || 'claude-3.5-sonnet',
       };
     } catch (error) {
+      // Log error
+      if (error instanceof Error) {
+        this.logger.logError({
+          id: requestId,
+          error: {
+            message: error.message,
+            code: error instanceof ClaudeCodeTimeoutError ? 'TIMEOUT' : error instanceof ClaudeCodeError ? 'CLAUDE_CODE_ERROR' : undefined,
+          },
+        });
+      }
+
       if (error instanceof ClaudeCodeTimeoutError) {
         return {
           success: false,
@@ -129,5 +173,33 @@ export class ClaudeCodeProvider implements LLMProviderInterface {
 
   async getAvailableModels(): Promise<string[]> {
     return ['claude-3.5-sonnet'];
+  }
+
+  /**
+   * Generate a unique request ID
+   */
+  private generateRequestId(): string {
+    return `req-${this.provider}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  }
+
+  /**
+   * Truncate prompt for logging to avoid excessive log size
+   */
+  private truncatePrompt(prompt: string, maxLength: number = 200): string {
+    return prompt.length > maxLength ? prompt.substring(0, maxLength) + '...' : prompt;
+  }
+
+  /**
+   * Get the logger instance for this provider
+   */
+  getLogger(): LLMLogger {
+    return this.logger;
+  }
+
+  /**
+   * Set a custom logger for this provider
+   */
+  setLogger(logger: LLMLogger): void {
+    this.logger = logger;
   }
 }
