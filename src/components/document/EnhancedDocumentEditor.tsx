@@ -11,7 +11,7 @@
  * - Error handling with automatic retry
  * - Read-only mode support
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { lineNumbers, highlightActiveLineGutter, keymap } from '@codemirror/view';
