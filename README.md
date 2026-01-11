@@ -24,6 +24,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Completed Task Document API (SPEC-DOCREF-001)
 - Document Reference Panel UI (SPEC-DOCREF-002)
 - AI Model History Recording (SPEC-MODELHISTORY-001)
+- Circular Dependency Fix (SPEC-DOCEDIT-002)
 
 ### In Progress Features
 
@@ -32,11 +33,11 @@ Game design pipeline visualization and AI-powered document generation workflow s
   - Frontend Implementation: Pending
   - Features: Version management, diff generation, auto-save API
 
-- Circular Dependency Fix (SPEC-DOCEDIT-002)
-  - Created shared types.ts file for document components
-  - Extracted SaveStatus type to break circular dependency
-  - EnhancedDocumentEditor and SaveStatusIndicator updated
-  - Test coverage: 7/7 tests passed for types and circular dependency
+- LLM Debug Console (SPEC-DEBUG-001)
+  - Keyboard shortcut (Ctrl+D/Cmd+D) to open debug console
+  - Real-time LLM API call monitoring
+  - Provider, Model, Response time display
+  - Development mode only feature
 
 ## Project Context
 
@@ -118,8 +119,3 @@ npx tsc --noEmit     # Check TypeScript without emitting
 - Do not use any state management other than Zustand
 - Do not store secrets in code
 - Do not commit node_modules or build artifacts
-
-## New Specifications (Draft)
-
-- Circular Dependency Fix (SPEC-DOCEDIT-002) - Fix blank screen issue
-- Game Development Specification (SPEC-GAME-001) - Bag collection game PRD
