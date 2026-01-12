@@ -21,12 +21,16 @@ export interface KanbanColumnProps {
   generatingTasks: Set<string>;
   /** Project ID for LLM settings */
   projectId: string;
+  /** Callback when a task card is clicked to view documents */
+  onViewDocuments?: (task: Task) => void;
+  /** Callback when archive button is clicked (only for prototype tasks) */
+  onArchive?: (taskId: string) => void;
 }
 
 /**
  * KanbanColumn - Drop zone column for Kanban board
  */
-export function KanbanColumn({ column, tasks, generatingTasks, projectId }: KanbanColumnProps) {
+export function KanbanColumn({ column, tasks, generatingTasks, projectId, onViewDocuments, onArchive }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -75,6 +79,8 @@ export function KanbanColumn({ column, tasks, generatingTasks, projectId }: Kanb
                 key={task.id}
                 task={task}
                 isGenerating={generatingTasks.has(task.id)}
+                onViewDocuments={onViewDocuments}
+                onArchive={onArchive}
               />
             ))
           )}

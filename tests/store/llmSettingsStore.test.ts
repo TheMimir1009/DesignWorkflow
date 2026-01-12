@@ -268,7 +268,9 @@ describe('LLM Settings Store', () => {
     });
 
     it('should return undefined for unknown provider', () => {
-      const provider = useLLMSettingsStore.getState().getProviderSettings('unknown' as any);
+      const provider = useLLMSettingsStore.getState().getProviderSettings(
+        'unknown' as 'claude-code' | 'ollama' | 'lm-studio'
+      );
 
       expect(provider).toBeUndefined();
     });

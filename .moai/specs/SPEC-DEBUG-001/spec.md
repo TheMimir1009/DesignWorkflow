@@ -1,9 +1,9 @@
 ---
 id: SPEC-DEBUG-001
-version: "1.0.0"
-status: "planned"
+version: "1.1.0"
+status: "in-progress"
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-12"
 author: "MoAI-ADK"
 priority: "high"
 ---
@@ -14,7 +14,81 @@ priority: "high"
 
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |------|------|--------|-----------|
+| 1.1.0 | 2026-01-12 | MoAI-ADK | 상태 변경 (planned -> in-progress), 구현 진행 상황 추가 |
 | 1.0.0 | 2026-01-11 | MoAI-ADK | 초기 SPEC 작성 |
+
+---
+
+## 구현 현황 (Implementation Status)
+
+### 진행률: 60%
+
+### 완료된 항목 (Completed)
+
+1. **데이터 모델 및 타입 정의** (TASK-001)
+   - `src/types/debug.ts` - 모든 인터페이스 정의 완료
+   - LLMCallLog, DebugFilters, DebugStats, ModelPricing 등
+   - SPEC-DEBUG-002 타입 포함
+
+2. **상태 관리 스토어** (TASK-002)
+   - `src/store/debugStore.ts` - Zustand 스토어 구현 완료
+   - 로그 추가, 업데이트, 필터링, 내보내기 기능 구현
+   - 통계 계산 기능 구현
+   - 1000개 로그 제한 로직 구현
+
+3. **모델 가격표 설정** (TASK-003)
+   - `src/config/modelPricing.ts` - 가격표 구현 완료
+   - calculateCost 함수 구현
+
+4. **LLM Logger 유틸리티** (TASK-005)
+   - `src/utils/llmLogger.ts` - 로거 클래스 구현 완료
+   - logRequest, logResponse, logError 메서드 구현
+   - 헤더 마스킹 (sanitizeHeaders) 기능 구현
+   - 토큰 사용량 추출 (extractUsage) 기능 구현
+
+5. **액세스 제어 유틸리티** (TASK-006)
+   - `src/utils/accessControl.ts` - 개발 모드 체크 기능 구현
+
+6. **UI 컴포넌트 구현** (TASK-007 ~ TASK-013)
+   - `src/components/debug/DebugConsole.tsx` - 메인 컴포넌트
+   - `src/components/debug/DebugHeader.tsx` - 헤더 컴포넌트
+   - `src/components/debug/DebugFilters.tsx` - 필터 컴포넌트
+   - `src/components/debug/DebugStats.tsx` - 통계 컴포넌트
+   - `src/components/debug/LogList.tsx` - 로그 목록 컴포넌트
+   - `src/components/debug/LogItem.tsx` - 개별 로그 항목 컴포넌트
+   - `src/components/debug/LogDetailModal.tsx` - 상세 보기 모달
+   - `src/components/debug/EmptyDebugState.tsx` - 빈 상태 컴포넌트
+   - `src/components/debug/DebugStatusIcon.tsx` - 상태 인디케이터
+
+### 미완료 항목 (Pending)
+
+1. **LLM API 연동** (TASK-005 확장)
+   - 기존 LLM 호출 코드에 Logger 통합 필요
+   - server/utils/claudeCodeRunner.ts에 로깅 연동 필요
+
+2. **디버그 메뉴 UI 통합**
+   - 메인 네비게이션에 Debug Console 메뉴 추가
+   - 단축키 기능 연동 (Ctrl+Shift+D 또는 Cmd+Shift+D)
+
+3. **재시도 기능** (TASK-014)
+   - debugService.ts 구현 필요
+   - 재시도 버튼 UI 연동 필요
+
+4. **내보내기 기능 검증** (TASK-015)
+   - JSON/CSV 내보내기 기능 테스트 필요
+
+5. **테스트 작성**
+   - 단위 테스트 (Store, Logger)
+   - 컴포넌트 테스트
+   - 통합 테스트
+
+### 다음 단계 (Next Steps)
+
+1. LLM API 호출 코드에 llmLogger 통합
+2. 디버그 콘솔 메뉴를 App.tsx 네비게이션에 추가
+3. 재시도 기능 구현
+4. 테스트 작성 및 커버리지 확보
+5. 개발 모드 빌드 설정 검증
 
 ---
 

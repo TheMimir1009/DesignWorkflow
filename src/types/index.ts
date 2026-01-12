@@ -563,3 +563,10 @@ export interface GenerationHistoryEntry {
   /** User feedback for modification requests */
   feedback?: string;
 }
+
+// =============================================================================
+// Debug Console Types (SPEC-DEBUG-001)
+// =============================================================================
+
+export * from './debug';
+

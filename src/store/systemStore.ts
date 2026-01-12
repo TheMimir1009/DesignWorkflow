@@ -40,7 +40,7 @@ const syncAliasMiddleware = <T extends SystemStoreState & SystemStoreActions>(
       syncedState.categoryFilter = syncedState.selectedCategory as string | null;
     }
 
-    set(syncedState as T | Partial<T> | ((state: T) => T | Partial<T>), replace, ...args);
+    set(syncedState as T | Partial<T> | ((state: T) => T | Partial<T>), replace);
   },
   get,
   api

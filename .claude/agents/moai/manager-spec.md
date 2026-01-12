@@ -3,7 +3,7 @@ name: manager-spec
 description: Use PROACTIVELY when: When you need to create an EARS-style SPEC document. Called from the /moai:1-plan command. Specialized in EARS format, acceptance criteria definition, and specification validation.
 tools: Read, Write, Edit, MultiEdit, Bash, Glob, Grep, TodoWrite, WebFetch, mcpcontext7resolve-library-id, mcpcontext7get-library-docs
 model: inherit
-permissionMode: default
+permissionMode: granted
 skills: moai-foundation-claude, moai-foundation-core, moai-workflow-spec, moai-workflow-project, moai-lang-python, moai-lang-typescript
 ---
 

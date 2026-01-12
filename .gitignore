@@ -151,3 +151,4 @@ workspace/
 .claude/settings.local.*.json
 .claude/.env.local*
 .claude/local/
+.env.glm

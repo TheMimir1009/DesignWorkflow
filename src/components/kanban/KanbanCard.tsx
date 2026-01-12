@@ -18,6 +18,8 @@ export interface KanbanCardProps {
   isGenerating?: boolean;
   /** Callback when archive button is clicked (only for prototype tasks) */
   onArchive?: (taskId: string) => void;
+  /** Callback when card is clicked to view documents */
+  onViewDocuments?: (task: Task) => void;
 }
 
 /**
@@ -159,6 +161,7 @@ export function KanbanCard({
   isDragging = false,
   isGenerating = false,
   onArchive,
+  onViewDocuments,
 }: KanbanCardProps) {
   const {
     attributes,
@@ -180,18 +183,34 @@ export function KanbanCard({
   const visibleReferences = task.references.slice(0, MAX_VISIBLE_REFERENCES);
   const remainingCount = task.references.length - MAX_VISIBLE_REFERENCES;
 
+  // Handle card click to view documents
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if dragging or clicking archive button
+    if (isCurrentlyDragging) return;
+
+    // Check if click is on a button (archive button)
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+
+    if (onViewDocuments) {
+      onViewDocuments(task);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      onClick={handleCardClick}
       data-testid={`kanban-card-${task.id}`}
       className={`
         relative p-3 bg-white rounded-lg shadow-sm border border-gray-200
         hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing
         ${isCurrentlyDragging ? 'opacity-50 shadow-lg' : ''}
         ${isGenerating ? 'animate-pulse' : ''}
+        ${onViewDocuments ? 'hover:border-blue-300' : ''}
       `}
     >
       {/* Archive Button (only for prototype tasks) */}

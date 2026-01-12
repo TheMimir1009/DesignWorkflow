@@ -17,41 +17,42 @@ import {
   buildDocumentModifyPrompt,
   type QAResponse,
   type ReferenceSystem,
+  type ProjectContext,
 } from '../promptBuilder.ts';
 
 describe('promptBuilder - Document Generation', () => {
   describe('buildDesignDocumentPrompt', () => {
-    it('should build prompt with Q&A responses', () => {
+    it('should build prompt with Q&A responses for Game Design Document', () => {
       const qaResponses: QAResponse[] = [
-        { question: 'What is the project name?', answer: 'TaskFlow' },
-        { question: 'What is the main purpose?', answer: 'Task management application' },
+        { question: 'What is the game name?', answer: 'BattleQuest' },
+        { question: 'What is the core mechanic?', answer: 'Turn-based combat system' },
       ];
 
       const result = buildDesignDocumentPrompt(qaResponses);
 
-      expect(result).toContain('TaskFlow');
-      expect(result).toContain('Task management application');
-      expect(result).toContain('design document');
+      expect(result).toContain('BattleQuest');
+      expect(result).toContain('Turn-based combat system');
+      expect(result).toContain('Game Design Document');
     });
 
     it('should include reference system context when provided', () => {
       const qaResponses: QAResponse[] = [
-        { question: 'What features are needed?', answer: 'User authentication' },
+        { question: 'What features are needed?', answer: 'Character progression' },
       ];
       const referenceSystemIds: ReferenceSystem[] = [
-        { id: 'sys-001', name: 'Auth System', description: 'JWT-based authentication' },
+        { id: 'sys-001', name: 'RPG System', description: 'Level-based progression' },
       ];
 
       const result = buildDesignDocumentPrompt(qaResponses, referenceSystemIds);
 
-      expect(result).toContain('Auth System');
-      expect(result).toContain('JWT-based authentication');
+      expect(result).toContain('RPG System');
+      expect(result).toContain('Level-based progression');
     });
 
     it('should handle empty Q&A responses gracefully', () => {
       const result = buildDesignDocumentPrompt([]);
 
-      expect(result).toContain('design document');
+      expect(result).toContain('Game Design Document');
       expect(result).toBeDefined();
     });
 
@@ -69,6 +70,20 @@ describe('promptBuilder - Document Generation', () => {
       expect(result).toContain('A2');
     });
 
+    it('should include GDD-specific sections', () => {
+      const qaResponses: QAResponse[] = [
+        { question: 'Test', answer: 'Test answer' },
+      ];
+
+      const result = buildDesignDocumentPrompt(qaResponses);
+
+      // Should include game-specific sections
+      expect(result).toContain('Game Overview');
+      expect(result).toContain('Core Gameplay Mechanics');
+      expect(result).toContain('Game Systems');
+      expect(result).toContain('Balance');
+    });
+
     it('should include markdown output format instruction', () => {
       const qaResponses: QAResponse[] = [
         { question: 'Test', answer: 'Test answer' },
@@ -81,43 +96,86 @@ describe('promptBuilder - Document Generation', () => {
   });
 
   describe('buildPRDPrompt', () => {
-    it('should build prompt with design document content', () => {
-      const designDocContent = `# Project Overview
-This is a task management application.
+    it('should build prompt with GDD content as development specification', () => {
+      const gddContent = `# Game Overview
+Turn-based RPG with combat system.
 
-## Features
-- User authentication
-- Task CRUD operations`;
+## Core Mechanics
+- Turn-based combat
+- Character progression`;
 
-      const result = buildPRDPrompt(designDocContent);
+      const result = buildPRDPrompt(gddContent);
 
-      expect(result).toContain('task management');
+      expect(result).toContain('Turn-based RPG');
       expect(result).toContain('PRD');
+      expect(result).toContain('Development Specification');
     });
 
-    it('should include instructions for PRD sections', () => {
-      const result = buildPRDPrompt('Simple design document');
+    it('should include technical PRD sections', () => {
+      const result = buildPRDPrompt('Simple GDD content');
 
-      // PRD should have standard sections
-      expect(result.toLowerCase()).toContain('requirement');
+      // PRD should have development-focused sections
+      expect(result).toContain('Technical Stack');
+      expect(result).toContain('System Architecture');
+      expect(result).toContain('API Design');
+      expect(result).toContain('Database Schema');
     });
 
-    it('should handle empty design document', () => {
+    it('should handle empty GDD content', () => {
       const result = buildPRDPrompt('');
 
       expect(result).toBeDefined();
       expect(result).toContain('PRD');
     });
 
-    it('should preserve design document structure in context', () => {
-      const designDocContent = `# Title
-## Section 1
-Content here`;
+    it('should preserve GDD structure in context', () => {
+      const gddContent = `# Game Title
+## Core Mechanics
+Combat system here`;
 
-      const result = buildPRDPrompt(designDocContent);
+      const result = buildPRDPrompt(gddContent);
 
-      expect(result).toContain('Title');
-      expect(result).toContain('Section 1');
+      expect(result).toContain('Game Title');
+      expect(result).toContain('Core Mechanics');
+    });
+
+    it('should include ProjectContext when provided', () => {
+      const gddContent = '# Simple Game';
+      const projectContext: ProjectContext = {
+        techStack: ['React', 'Node.js', 'PostgreSQL'],
+        architecture: 'Microservices with API Gateway',
+        constraints: ['Must support 10K concurrent users'],
+        integrations: ['Payment gateway', 'Analytics service'],
+      };
+
+      const result = buildPRDPrompt(gddContent, projectContext);
+
+      expect(result).toContain('React');
+      expect(result).toContain('Node.js');
+      expect(result).toContain('PostgreSQL');
+      expect(result).toContain('Microservices');
+      expect(result).toContain('10K concurrent users');
+      expect(result).toContain('Payment gateway');
+    });
+
+    it('should work without ProjectContext for backward compatibility', () => {
+      const gddContent = '# Game Design Document';
+
+      const result = buildPRDPrompt(gddContent);
+
+      expect(result).toBeDefined();
+      expect(result).toContain('Game Design Document');
+      expect(result).toContain('PRD');
+    });
+
+    it('should focus on implementation details, not game design concepts', () => {
+      const gddContent = '# Game with complex mechanics';
+
+      const result = buildPRDPrompt(gddContent);
+
+      expect(result).toContain('implementation');
+      expect(result).toContain('technical');
+      expect(result.toLowerCase()).toContain('engineer');
     });
   });
 
