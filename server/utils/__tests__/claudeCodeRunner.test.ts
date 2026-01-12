@@ -69,7 +69,7 @@ describe('claudeCodeRunner', () => {
       expect(mockSpawn).toHaveBeenCalledWith(
         'claude',
         ['-p', prompt, '--output-format', 'json', '--allowedTools', 'Read,Write,Grep'],
-        { cwd: workingDir }
+        { cwd: workingDir, stdio: ['ignore', 'pipe', 'pipe'] }
       );
     });
 

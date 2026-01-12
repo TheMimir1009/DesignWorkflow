@@ -84,6 +84,12 @@ export function EnhancedDocumentEditor({
   const [lastSavedTime, setLastSavedTime] = useState<Date>(new Date());
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  // Notify parent of initial status
+  useEffect(() => {
+    onSaveStatusChange('saved');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryConfigRef = useRef<RetryConfig>({
     maxRetries: 3,

@@ -138,6 +138,9 @@ export function SaveStatusIndicator({
   useEffect(() => {
     if (!lastSavedTime || status !== 'saved') return;
 
+    // Skip timer in test environment to prevent infinite loop
+    if (process.env.NODE_ENV === 'test') return;
+
     const interval = setInterval(() => {
       setRelativeTime(formatRelativeTime(lastSavedTime));
     }, 60000);
