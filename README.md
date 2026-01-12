@@ -4,7 +4,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 
 ## Project Progress
 
-**Current Progress: 100%** (18 features completed)
+**Current Progress: 100%** (19 features completed)
 
 ### Completed Features
 
@@ -32,6 +32,12 @@ Game design pipeline visualization and AI-powered document generation workflow s
   - Cost estimation by model pricing
   - 53 tests passing with 95.55% coverage
   - Core logging modules: llmLogger.ts, tokenExtractor.ts, modelPricing.ts
+- **LM Studio Dynamic Model Selection UI (SPEC-LLM-004)**
+  - LM Studio 프로바이더 선택 시 동적 모델 목록 표시
+  - 로딩 상태 및 에러 처리 UI 개선
+  - TaskStageModelSelector 및 ColumnLLMSettingsModal 수정
+  - 23/23 테스트 통과
+  - 관련 SPEC: SPEC-LLM-002, SPEC-LLM-003
 
 ### In Progress Features
 
