@@ -1,7 +1,7 @@
 ---
 id: SPEC-DEBUG-005
-version: "1.0.0"
-status: draft
+version: "1.1.0"
+status: completed
 created: "2026-01-12"
 updated: "2026-01-12"
 author: ""
@@ -15,6 +15,7 @@ priority: HIGH
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 1.0.0 | 2026-01-12 | Initial draft | - |
+| 1.1.0 | 2026-01-12 | Implementation completed, status changed to completed | - |
 
 ## Overview
 
