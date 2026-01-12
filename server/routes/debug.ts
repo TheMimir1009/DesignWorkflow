@@ -1,5 +1,5 @@
 /**
- * Debug API Routes (SPEC-DEBUG-003)
+ * Debug API Routes (SPEC-DEBUG-003, SPEC-LLM-002)
  * Endpoints for LLM debug logs management
  */
 import { Router, type Request, type Response } from 'express';
@@ -117,6 +117,83 @@ debugRouter.post('/sync', async (req: Request, res: Response): Promise<void> => 
       logs: clientLogs,
       currentTimestamp: new Date().toISOString(),
     });
+  } catch (error) {
+    sendError(res, 500, error instanceof Error ? error.message : 'Unknown error');
+  }
+});
+
+/**
+ * GET /api/debug/logs/connection-tests
+ * Get all connection test logs (SPEC-LLM-002)
+ */
+debugRouter.get('/logs/connection-tests', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const logger = getSharedLogger();
+    const connectionTestLogs = logger.getConnectionTestLogs();
+
+    // Transform to client format
+    const clientLogs = connectionTestLogs.map(log => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      provider: log.provider,
+      model: log.model,
+      endpoint: 'connection-test',
+      method: 'TEST',
+      status: log.error ? 'error' : 'success',
+      statusCode: log.error ? undefined : 200,
+      duration: log.metrics?.duration_ms,
+      error: log.error?.message,
+      request: log.request,
+      response: log.response,
+      // Connection test specific fields
+      phase: log.request?.parameters?.phase,
+      projectId: log.request?.parameters?.projectId,
+      modelCount: log.request?.parameters?.modelCount,
+      models: log.request?.parameters?.models,
+    }));
+
+    sendSuccess(res, clientLogs);
+  } catch (error) {
+    sendError(res, 500, error instanceof Error ? error.message : 'Unknown error');
+  }
+});
+
+/**
+ * GET /api/debug/logs/connection-tests/:provider
+ * Get connection test logs for a specific provider (SPEC-LLM-002)
+ */
+debugRouter.get('/logs/connection-tests/:provider', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { provider } = req.params;
+
+    const logger = getSharedLogger();
+    const connectionTestLogs = logger.getConnectionTestLogs();
+
+    // Filter by provider
+    const filteredLogs = connectionTestLogs.filter(log => log.provider === provider);
+
+    // Transform to client format
+    const clientLogs = filteredLogs.map(log => ({
+      id: log.id,
+      timestamp: log.timestamp,
+      provider: log.provider,
+      model: log.model,
+      endpoint: 'connection-test',
+      method: 'TEST',
+      status: log.error ? 'error' : 'success',
+      statusCode: log.error ? undefined : 200,
+      duration: log.metrics?.duration_ms,
+      error: log.error?.message,
+      request: log.request,
+      response: log.response,
+      // Connection test specific fields
+      phase: log.request?.parameters?.phase,
+      projectId: log.request?.parameters?.projectId,
+      modelCount: log.request?.parameters?.modelCount,
+      models: log.request?.parameters?.models,
+    }));
+
+    sendSuccess(res, clientLogs);
   } catch (error) {
     sendError(res, 500, error instanceof Error ? error.message : 'Unknown error');
   }

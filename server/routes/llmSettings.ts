@@ -200,7 +200,8 @@ llmSettingsRouter.post(
 
       // Create provider instance and test connection
       const llmProvider = createLLMProvider(providerSettings);
-      const result = await llmProvider.testConnection();
+      // Pass projectId for connection test logging (SPEC-LLM-002)
+      const result = await llmProvider.testConnection(projectId);
 
       // Update connection status based on result
       await updateProviderSettings(projectId, provider as LLMProvider, {

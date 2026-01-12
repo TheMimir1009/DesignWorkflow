@@ -201,13 +201,17 @@ describe('LLM Settings Store', () => {
 
       expect(result).toEqual({
         success: false,
+        status: 'error',
         error: 'Connection failed',
+        timestamp: expect.any(String),
       });
 
       const state = useLLMSettingsStore.getState();
       expect(state.connectionTestResults.get('openai')).toEqual({
         success: false,
+        status: 'error',
         error: 'Connection failed',
+        timestamp: expect.any(String),
       });
     });
   });
@@ -278,10 +282,11 @@ describe('LLM Settings Store', () => {
     it('should get enabled providers', () => {
       const enabled = useLLMSettingsStore.getState().getEnabledProviders();
 
-      // OpenAI (manually enabled) + Claude Code (default enabled)
-      expect(enabled).toHaveLength(2);
+      // OpenAI (manually enabled) + Claude Code (default enabled) + LMStudio (default enabled)
+      expect(enabled).toHaveLength(3);
       expect(enabled.some(p => p.provider === 'openai')).toBe(true);
       expect(enabled.some(p => p.provider === 'claude-code')).toBe(true);
+      expect(enabled.some(p => p.provider === 'lmstudio')).toBe(true);
     });
 
     it('should get stage config', () => {

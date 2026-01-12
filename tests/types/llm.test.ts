@@ -186,12 +186,13 @@ describe('LLM Types', () => {
       expect(providerIds).toContain('lmstudio');
     });
 
-    it('should have only Claude Code enabled by default', () => {
+    it('should have Claude Code and LMStudio enabled by default', () => {
       const settings = createDefaultProjectLLMSettings('project-123');
 
       const enabledProviders = settings.providers.filter(p => p.isEnabled);
-      expect(enabledProviders).toHaveLength(1);
-      expect(enabledProviders[0].provider).toBe('claude-code');
+      expect(enabledProviders).toHaveLength(2);
+      expect(enabledProviders.some(p => p.provider === 'claude-code')).toBe(true);
+      expect(enabledProviders.some(p => p.provider === 'lmstudio')).toBe(true);
     });
   });
 

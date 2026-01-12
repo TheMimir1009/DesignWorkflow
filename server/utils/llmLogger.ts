@@ -1,9 +1,12 @@
+import type { LLMProvider } from '../../src/types/llm';
+
 /**
  * LLM Logger - Server-side LLM API call logger
  * Thread-safe in-memory logger with automatic log rotation
  *
  * Features:
  * - Request/Response/Error logging
+ * - Connection test logging (SPEC-LLM-002)
  * - Thread-safe operations
  * - Automatic log rotation (max 1000 entries)
  * - API key masking
@@ -61,6 +64,45 @@ export interface LLMLogEntry {
 }
 
 /**
+ * Connection test log start parameters (SPEC-LLM-002)
+ */
+export interface ConnectionTestStartParams {
+  id: string;
+  timestamp: string;
+  projectId: string;
+  provider: LLMProvider;
+  startedAt: string;
+}
+
+/**
+ * Connection test log success parameters (SPEC-LLM-002)
+ */
+export interface ConnectionTestSuccessParams {
+  id: string;
+  timestamp: string;
+  projectId: string;
+  provider: LLMProvider;
+  completedAt: string;
+  latency: number;
+  models: string[];
+}
+
+/**
+ * Connection test log failure parameters (SPEC-LLM-002)
+ */
+export interface ConnectionTestFailureParams {
+  id: string;
+  timestamp: string;
+  projectId: string;
+  provider: LLMProvider;
+  error: {
+    code: string;
+    message: string;
+    suggestion?: string;
+  };
+}
+
+/**
  * LLM Logger Class
  * Thread-safe in-memory logger with automatic log rotation
  */
@@ -102,6 +144,10 @@ export class LLMLogger {
       if (entry.metrics) {
         existing.metrics = entry.metrics;
       }
+      // Preserve request from new entry if provided (for connection test logs)
+      if (entry.request) {
+        existing.request = entry.request;
+      }
     } else {
       // Create new entry
       const logEntry: LLMLogEntry = {
@@ -111,6 +157,7 @@ export class LLMLogger {
         model: entry.model || 'unknown',
         response: entry.response,
         metrics: entry.metrics,
+        request: entry.request,
       };
       this.addLog(id, logEntry);
     }
@@ -127,6 +174,10 @@ export class LLMLogger {
     if (existing) {
       // Update existing entry
       existing.error = entry.error;
+      // Preserve request from new entry if provided (for connection test logs)
+      if (entry.request) {
+        existing.request = entry.request;
+      }
     } else {
       // Create new entry
       const logEntry: LLMLogEntry = {
@@ -135,6 +186,7 @@ export class LLMLogger {
         provider: entry.provider || 'unknown',
         model: entry.model || 'unknown',
         error: entry.error,
+        request: entry.request,
       };
       this.addLog(id, logEntry);
     }
@@ -154,6 +206,103 @@ export class LLMLogger {
   clearLogs(): void {
     this.logs.clear();
     this.logOrder = [];
+  }
+
+  /**
+   * Log connection test start (SPEC-LLM-002)
+   */
+  logConnectionTestStart(params: ConnectionTestStartParams): void {
+    const logEntry: Partial<LLMLogEntry> = {
+      id: params.id,
+      timestamp: params.timestamp,
+      provider: params.provider,
+      model: 'connection-test',
+      request: {
+        prompt: `Connection test started for project: ${params.projectId}`,
+        parameters: {
+          type: 'connection-test',
+          phase: 'start',
+          projectId: params.projectId,
+          startedAt: params.startedAt,
+        },
+      },
+    };
+
+    this.logRequest(logEntry);
+  }
+
+  /**
+   * Log connection test success (SPEC-LLM-002)
+   */
+  logConnectionTestSuccess(params: ConnectionTestSuccessParams): void {
+    const logEntry: Partial<LLMLogEntry> = {
+      id: params.id,
+      timestamp: params.timestamp,
+      provider: params.provider,
+      model: 'connection-test',
+      response: {
+        content: `Connection test successful. Found ${params.models.length} models.`,
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: params.models.length,
+        },
+      },
+      metrics: {
+        duration_ms: params.latency,
+      },
+      request: {
+        parameters: {
+          type: 'connection-test',
+          phase: 'success',
+          projectId: params.projectId,
+          completedAt: params.completedAt,
+          modelCount: params.models.length,
+          models: params.models,
+        },
+      },
+    };
+
+    this.logResponse(logEntry);
+  }
+
+  /**
+   * Log connection test failure (SPEC-LLM-002)
+   */
+  logConnectionTestFailure(params: ConnectionTestFailureParams): void {
+    const logEntry: Partial<LLMLogEntry> = {
+      id: params.id,
+      timestamp: params.timestamp,
+      provider: params.provider,
+      model: 'connection-test',
+      error: {
+        message: params.error.message,
+        code: params.error.code,
+      },
+      request: {
+        parameters: {
+          type: 'connection-test',
+          phase: 'failure',
+          projectId: params.projectId,
+          suggestion: params.error.suggestion,
+        },
+      },
+    };
+
+    this.logError(logEntry);
+  }
+
+  /**
+   * Get connection test logs only (SPEC-LLM-002)
+   */
+  getConnectionTestLogs(): LLMLogEntry[] {
+    return this.getLogs().filter(
+      (log) =>
+        log.request?.parameters &&
+        typeof log.request.parameters === 'object' &&
+        'type' in log.request.parameters &&
+        log.request.parameters.type === 'connection-test'
+    );
   }
 
   /**

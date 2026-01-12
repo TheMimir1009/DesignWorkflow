@@ -202,11 +202,24 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
   /**
    * Test the connection to the provider with error classification
    * Default implementation using retry logic
+   * @param projectId - Optional project ID for connection test logging (SPEC-LLM-002)
    */
-  async testConnection(): Promise<ConnectionTestResult> {
+  async testConnection(projectId?: string): Promise<ConnectionTestResult> {
     const startTime = Date.now();
+    const testId = `test-${this.provider}-${Date.now()}`;
 
     try {
+      // Log connection test start if projectId is provided (SPEC-LLM-002)
+      if (projectId) {
+        this.logger.logConnectionTestStart({
+          id: testId,
+          timestamp: new Date().toISOString(),
+          projectId,
+          provider: this.provider,
+          startedAt: new Date().toISOString(),
+        });
+      }
+
       // Use retry logic for connection test
       const models = await retryWithBackoff(
         () => this.getAvailableModels(),
@@ -224,6 +237,19 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
 
       const latency = Date.now() - startTime;
 
+      // Log connection test success if projectId is provided (SPEC-LLM-002)
+      if (projectId) {
+        this.logger.logConnectionTestSuccess({
+          id: testId,
+          timestamp: new Date().toISOString(),
+          projectId,
+          provider: this.provider,
+          completedAt: new Date().toISOString(),
+          latency,
+          models,
+        });
+      }
+
       return {
         success: true,
         status: 'connected',
@@ -234,6 +260,21 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
     } catch (error) {
       const classifiedError = classifyError(error);
       const latency = Date.now() - startTime;
+
+      // Log connection test failure if projectId is provided (SPEC-LLM-002)
+      if (projectId) {
+        this.logger.logConnectionTestFailure({
+          id: testId,
+          timestamp: new Date().toISOString(),
+          projectId,
+          provider: this.provider,
+          error: {
+            code: classifiedError.code,
+            message: classifiedError.message,
+            suggestion: this.getErrorSuggestion(classifiedError.code),
+          },
+        });
+      }
 
       this.logger.logError({
         id: `test-${this.provider}-failed`,
@@ -250,6 +291,22 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  /**
+   * Get error suggestion based on error code (SPEC-LLM-002)
+   */
+  private getErrorSuggestion(errorCode: ConnectionErrorCode): string | undefined {
+    const suggestions: Record<ConnectionErrorCode, string> = {
+      AUTHENTICATION_FAILED: 'Check your API key in provider settings',
+      NETWORK_ERROR: 'Check your network connection and provider endpoint',
+      TIMEOUT: 'Check your network connection and try again',
+      API_ERROR: 'Provider API is temporarily unavailable, try again later',
+      INVALID_RESPONSE: 'Provider returned invalid response, check provider configuration',
+      UNKNOWN_ERROR: 'An unknown error occurred, check provider settings and network',
+    };
+
+    return suggestions[errorCode];
   }
 
   /**
