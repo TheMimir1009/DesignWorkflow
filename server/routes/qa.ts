@@ -1,9 +1,21 @@
 /**
  * Q&A API Routes
  * Handles all Q&A-related endpoints for the form-based Q&A system
+ * SPEC-DEBUG-005: Standardized error handling and response formats
  */
 import { Router, type Request, type Response } from 'express';
 import { sendSuccess, sendError } from '../utils/response.ts';
+import {
+  sendApiSuccess,
+  sendApiSuccessWithNull,
+  sendApiError,
+  sendApiErrorFromBuilder,
+} from '../utils/apiResponse.ts';
+import {
+  buildTaskNotFoundError,
+  buildMissingRequiredFieldError,
+  buildInvalidCategoryError,
+} from '../utils/errorBuilder.ts';
 import {
   loadQuestionTemplate,
   getAvailableCategories,
@@ -97,6 +109,7 @@ qaRouter.get('/:category', async (req: Request, res: Response): Promise<void> =>
 
 /**
  * POST /api/tasks/:taskId/qa - Save Q&A answers for a task
+ * SPEC-DEBUG-005: REQ-ERR-005 - Auto-creates session if not exists
  *
  * Path Parameters:
  * - taskId: Task UUID
@@ -109,7 +122,7 @@ qaRouter.get('/:category', async (req: Request, res: Response): Promise<void> =>
  *
  * Response: ApiResponse<{ sessionId: string; session: QASession }>
  * - 200: Q&A answers saved successfully
- * - 400: Missing required fields
+ * - 400: Missing required fields or invalid category
  * - 404: Task not found
  * - 500: Server error
  */
@@ -120,22 +133,23 @@ export async function saveTaskQA(req: Request, res: Response): Promise<void> {
 
     // Validate required fields
     if (!category) {
-      sendError(res, 400, 'Category is required');
+      sendApiErrorFromBuilder(res, buildMissingRequiredFieldError('category'), 400);
       return;
     }
 
     if (!isValidCategory(category)) {
-      sendError(res, 400, `Invalid category: ${category}`);
+      sendApiErrorFromBuilder(res, buildInvalidCategoryError(category), 400);
       return;
     }
 
     // Check if task exists
     const taskResult = await getTaskById(taskId);
     if (!taskResult) {
-      sendError(res, 404, 'Task not found');
+      sendApiErrorFromBuilder(res, buildTaskNotFoundError(taskId), 404);
       return;
     }
 
+    // SPEC-DEBUG-005: REQ-ERR-005 - Auto-create session if not exists
     // Get or create Q&A session
     let session = await getQASessionByTaskId(taskId);
 
@@ -169,25 +183,26 @@ export async function saveTaskQA(req: Request, res: Response): Promise<void> {
 
     await updateTask(taskId, { qaAnswers });
 
-    sendSuccess(res, {
+    sendApiSuccess(res, {
       sessionId: savedSession.id,
       session: savedSession,
     });
   } catch (error) {
     console.error('Error saving Q&A answers:', error);
-    sendError(res, 500, 'Failed to save Q&A answers');
+    sendApiError(res, 500, 'Failed to save Q&A answers');
   }
 }
 
 /**
  * GET /api/tasks/:taskId/qa - Get Q&A session for a task
+ * SPEC-DEBUG-005: REQ-ERR-004 - Returns 200 with null when session not found
  *
  * Path Parameters:
  * - taskId: Task UUID
  *
- * Response: ApiResponse<QASession>
- * - 200: Q&A session retrieved
- * - 404: Task or session not found
+ * Response: ApiResponse<QASession | null>
+ * - 200: Q&A session retrieved (or null if not exists)
+ * - 404: Task not found
  * - 500: Server error
  */
 export async function getTaskQA(req: Request, res: Response): Promise<void> {
@@ -197,21 +212,22 @@ export async function getTaskQA(req: Request, res: Response): Promise<void> {
     // Check if task exists
     const taskResult = await getTaskById(taskId);
     if (!taskResult) {
-      sendError(res, 404, 'Task not found');
+      sendApiErrorFromBuilder(res, buildTaskNotFoundError(taskId), 404);
       return;
     }
 
     // Get Q&A session
     const session = await getQASessionByTaskId(taskId);
     if (!session) {
-      sendError(res, 404, 'Q&A session not found for this task');
+      // SPEC-DEBUG-005: REQ-ERR-004 - Return 200 OK with null for optional resources
+      sendApiSuccessWithNull(res);
       return;
     }
 
-    sendSuccess(res, session);
+    sendApiSuccess(res, session);
   } catch (error) {
     console.error('Error getting Q&A session:', error);
-    sendError(res, 500, 'Failed to get Q&A session');
+    sendApiError(res, 500, 'Failed to get Q&A session');
   }
 }
 
