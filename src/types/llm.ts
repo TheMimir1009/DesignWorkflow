@@ -11,7 +11,24 @@
 export type LLMProvider = 'openai' | 'gemini' | 'claude-code' | 'lmstudio';
 
 /** Connection status for a provider */
-export type ConnectionStatus = 'connected' | 'disconnected' | 'error' | 'untested';
+export type ConnectionStatus = 'connected' | 'disconnected' | 'error' | 'untested' | 'testing';
+
+/** Connection error codes for classification */
+export type ConnectionErrorCode =
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'AUTHENTICATION_FAILED'
+  | 'API_ERROR'
+  | 'INVALID_RESPONSE'
+  | 'UNKNOWN_ERROR';
+
+/** Structured connection error with retry information */
+export interface ConnectionError {
+  code: ConnectionErrorCode;
+  message: string;
+  retryable: boolean;
+  details?: Record<string, unknown>;
+}
 
 /** Task stages that use LLM generation */
 export type TaskStage = 'design' | 'prd' | 'prototype';
@@ -116,9 +133,11 @@ export interface LLMResult {
 /** Result of connection test */
 export interface ConnectionTestResult {
   success: boolean;
+  status?: ConnectionStatus;
   latency?: number;
   models?: string[];
-  error?: string;
+  error?: string | ConnectionError;
+  timestamp?: string;
 }
 
 // ============================================================================
@@ -136,7 +155,7 @@ export function isValidProvider(value: string): value is LLMProvider {
  * Check if a string is a valid connection status
  */
 export function isValidConnectionStatus(value: string): value is ConnectionStatus {
-  return ['connected', 'disconnected', 'error', 'untested'].includes(value);
+  return ['connected', 'disconnected', 'error', 'untested', 'testing'].includes(value);
 }
 
 // ============================================================================
@@ -162,6 +181,7 @@ export function createDefaultModelConfig(
 
 /**
  * Create default provider settings
+ * LMStudio is enabled by default for local development
  */
 export function createDefaultProviderSettings(provider: LLMProvider): LLMProviderSettings {
   const isClaudeCode = provider === 'claude-code';
@@ -171,7 +191,7 @@ export function createDefaultProviderSettings(provider: LLMProvider): LLMProvide
     provider,
     apiKey: '',
     endpoint: isLMStudio ? 'http://localhost:1234/v1' : undefined,
-    isEnabled: isClaudeCode,
+    isEnabled: isClaudeCode || isLMStudio,
     connectionStatus: isClaudeCode ? 'connected' : 'untested',
   };
 }

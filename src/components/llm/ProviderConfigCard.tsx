@@ -21,14 +21,39 @@ function getStatusBadge(status: LLMProviderSettings['connectionStatus']) {
   switch (status) {
     case 'connected':
       return { color: 'bg-green-500', text: '연결됨' };
+    case 'disconnected':
+      return { color: 'bg-gray-500', text: '연결안됨' };
     case 'error':
       return { color: 'bg-red-500', text: '오류' };
-    case 'pending':
-      return { color: 'bg-yellow-500', text: '대기중' };
+    case 'testing':
+      return { color: 'bg-blue-500', text: '테스트중' };
     case 'untested':
     default:
       return { color: 'bg-gray-500', text: '미확인' };
   }
+}
+
+/**
+ * Get error message from ConnectionTestResult error field
+ */
+function getErrorMessage(error: ConnectionTestResult['error']): string {
+  if (!error) return '연결 실패';
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  // ConnectionError object
+  const errorMessages: Record<string, string> = {
+    NETWORK_ERROR: '네트워크 오류',
+    TIMEOUT: '요청 시간 초과',
+    AUTHENTICATION_FAILED: '인증 실패',
+    API_ERROR: 'API 오류',
+    INVALID_RESPONSE: '잘못된 응답',
+    UNKNOWN_ERROR: '알 수 없는 오류',
+  };
+
+  return errorMessages[error.code] || error.message || '연결 실패';
 }
 
 /**
@@ -207,15 +232,22 @@ export function ProviderConfigCard({
             </button>
 
             {testResult && (
-              <span
-                className={`text-sm ${
-                  testResult.success ? 'text-green-400' : 'text-red-400'
-                }`}
-              >
-                {testResult.success
-                  ? `연결 성공${testResult.latency ? ` (${testResult.latency}ms)` : ''}`
-                  : testResult.error || '연결 실패'}
-              </span>
+              <div className="flex flex-col">
+                <span
+                  className={`text-sm ${
+                    testResult.success ? 'text-green-400' : 'text-red-400'
+                  }`}
+                >
+                  {testResult.success
+                    ? `연결 성공${testResult.latency ? ` (${testResult.latency}ms)` : ''}`
+                    : getErrorMessage(testResult.error)}
+                </span>
+                {testResult.error && typeof testResult.error !== 'string' && testResult.error.retryable !== undefined && (
+                  <span className={`text-xs ${testResult.error.retryable ? 'text-yellow-400' : 'text-gray-400'}`}>
+                    {testResult.error.retryable ? '다시 시도 가능' : '다시 시도 불가'}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

@@ -3,10 +3,101 @@
  * Common interface for all LLM providers
  */
 
-import type { LLMProvider, LLMModelConfig, LLMResult, ConnectionTestResult } from '../../../src/types/llm';
+import type { LLMProvider, LLMModelConfig, LLMResult, ConnectionTestResult, ConnectionError, ConnectionErrorCode } from '../../../src/types/llm';
 import { LLMLogger } from '../llmLogger';
 import { extractTokenUsage } from '../tokenExtractor';
 import { calculateCost } from '../modelPricing';
+
+/**
+ * Default retry configuration
+ */
+export interface RetryConfig {
+  maxRetries: number;
+  retryableErrors: ConnectionErrorCode[];
+  initialDelayMs: number;
+  maxDelayMs: number;
+  backoffMultiplier: number;
+}
+
+export const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  retryableErrors: ['NETWORK_ERROR', 'TIMEOUT', 'API_ERROR'],
+  initialDelayMs: 1000,
+  maxDelayMs: 10000,
+  backoffMultiplier: 2,
+};
+
+/**
+ * Classify error into ConnectionErrorCode
+ */
+function classifyError(error: unknown): ConnectionError {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+
+    // Network/timeout errors
+    if (message.includes('timeout') || message.includes('timed out') || error.name === 'AbortError') {
+      return {
+        code: 'TIMEOUT',
+        message: error.message,
+        retryable: true,
+      };
+    }
+
+    if (message.includes('network') || message.includes('fetch') || message.includes('econnrefused')) {
+      return {
+        code: 'NETWORK_ERROR',
+        message: error.message,
+        retryable: true,
+      };
+    }
+
+    // Authentication errors
+    if (message.includes('unauthorized') || message.includes('authentication') || message.includes('401') || message.includes('403')) {
+      return {
+        code: 'AUTHENTICATION_FAILED',
+        message: error.message,
+        retryable: false,
+        details: { originalError: error.message },
+      };
+    }
+
+    // API errors (5xx = retryable, 4xx except auth = not retryable)
+    if (message.includes('500') || message.includes('502') || message.includes('503') || message.includes('504')) {
+      return {
+        code: 'API_ERROR',
+        message: error.message,
+        retryable: true,
+        details: { originalError: error.message },
+      };
+    }
+
+    if (message.includes('400') || message.includes('404') || message.includes('422')) {
+      return {
+        code: 'API_ERROR',
+        message: error.message,
+        retryable: false,
+        details: { originalError: error.message },
+      };
+    }
+
+    // Response parsing errors
+    if (message.includes('json') || message.includes('parse') || message.includes('invalid response')) {
+      return {
+        code: 'INVALID_RESPONSE',
+        message: error.message,
+        retryable: false,
+        details: { originalError: error.message },
+      };
+    }
+  }
+
+  // Unknown error
+  return {
+    code: 'UNKNOWN_ERROR',
+    message: error instanceof Error ? error.message : 'Unknown error occurred',
+    retryable: true, // Default to retryable for unknown errors
+  };
+}
 
 /**
  * Common interface that all LLM providers must implement
@@ -44,6 +135,48 @@ export interface ProviderConfig {
   apiKey?: string;
   endpoint?: string;
   logger?: LLMLogger; // Optional shared logger instance
+  retryConfig?: Partial<RetryConfig>; // Optional retry configuration
+}
+
+/**
+ * Retry logic with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  config: RetryConfig,
+  onRetry?: (attempt: number, error: ConnectionError) => void
+): Promise<T> {
+  let lastError: ConnectionError | null = null;
+
+  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const classifiedError = classifyError(error);
+      lastError = classifiedError;
+
+      // Don't retry if error is not retryable
+      if (!classifiedError.retryable) {
+        throw error;
+      }
+
+      // Don't retry after last attempt
+      if (attempt >= config.maxRetries) {
+        throw error;
+      }
+
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt),
+        config.maxDelayMs
+      );
+
+      onRetry?.(attempt + 1, classifiedError);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -54,16 +187,70 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
   protected apiKey: string;
   protected endpoint: string;
   protected logger: LLMLogger;
+  protected retryConfig: RetryConfig;
 
   constructor(config: ProviderConfig, defaultEndpoint: string) {
     this.apiKey = config.apiKey || '';
     this.endpoint = config.endpoint || defaultEndpoint;
     this.logger = config.logger || new LLMLogger();
+    this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...config.retryConfig };
   }
 
   abstract generate(prompt: string, config: LLMModelConfig, workingDir?: string): Promise<LLMResult>;
-  abstract testConnection(): Promise<ConnectionTestResult>;
   abstract getAvailableModels(): Promise<string[]>;
+
+  /**
+   * Test the connection to the provider with error classification
+   * Default implementation using retry logic
+   */
+  async testConnection(): Promise<ConnectionTestResult> {
+    const startTime = Date.now();
+
+    try {
+      // Use retry logic for connection test
+      const models = await retryWithBackoff(
+        () => this.getAvailableModels(),
+        this.retryConfig,
+        (attempt, error) => {
+          this.logger.logError({
+            id: `test-${this.provider}-${attempt}`,
+            error: {
+              message: `Retry attempt ${attempt}: ${error.message}`,
+              code: error.code,
+            },
+          });
+        }
+      );
+
+      const latency = Date.now() - startTime;
+
+      return {
+        success: true,
+        status: 'connected',
+        latency,
+        models,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      const classifiedError = classifyError(error);
+      const latency = Date.now() - startTime;
+
+      this.logger.logError({
+        id: `test-${this.provider}-failed`,
+        error: {
+          message: classifiedError.message,
+          code: classifiedError.code,
+        },
+      });
+
+      return {
+        success: false,
+        status: 'error',
+        error: classifiedError,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
 
   /**
    * Make HTTP request with timeout and error handling

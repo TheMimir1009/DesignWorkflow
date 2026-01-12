@@ -8,6 +8,7 @@ import type {
   LLMProviderSettings,
   TaskStageConfig,
   ConnectionTestResult,
+  ConnectionError,
 } from '../types/llm';
 import type { ApiResponse } from '../types';
 
@@ -17,9 +18,14 @@ import type { ApiResponse } from '../types';
 export const API_BASE_URL = 'http://localhost:3001';
 
 /**
+ * Default timeout for API requests (30 seconds)
+ */
+export const DEFAULT_TIMEOUT = 30000;
+
+/**
  * Handle API response and throw error if unsuccessful
  */
-async function handleResponse<T>(response: Response): Promise<T> {
+export async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -31,6 +37,37 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   return json.data as T;
+}
+
+/**
+ * Wrapper to add timeout to fetch requests
+ * @param url - URL to fetch
+ * @param options - Fetch options
+ * @param timeout - Timeout in milliseconds
+ * @returns Promise resolving to Response
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout: number = DEFAULT_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeout}ms`);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -112,25 +149,73 @@ export async function updateTaskStageConfig(
 }
 
 /**
- * Test connection to a provider
+ * Test connection to a provider with timeout
  * @param projectId - Project ID
  * @param provider - Provider to test
+ * @param timeout - Optional custom timeout in milliseconds
  * @returns Promise resolving to connection test result
  */
 export async function testProviderConnection(
   projectId: string,
-  provider: LLMProvider
+  provider: LLMProvider,
+  timeout?: number
 ): Promise<ConnectionTestResult> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/projects/${projectId}/llm-settings/test-connection/${provider}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/api/projects/${projectId}/llm-settings/test-connection/${provider}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       },
+      timeout ?? DEFAULT_TIMEOUT
+    );
+    return handleResponse<ConnectionTestResult>(response);
+  } catch (error) {
+    // Handle timeout and network errors
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        const timeoutError: ConnectionError = {
+          code: 'TIMEOUT',
+          message: error.message,
+          retryable: true,
+        };
+        return {
+          success: false,
+          status: 'error',
+          error: timeoutError,
+          timestamp: new Date().toISOString(),
+        };
+      }
+      if (error.message.includes('HTTP error')) {
+        const apiError: ConnectionError = {
+          code: 'API_ERROR',
+          message: error.message,
+          retryable: false,
+          details: { originalError: error.message },
+        };
+        return {
+          success: false,
+          status: 'error',
+          error: apiError,
+          timestamp: new Date().toISOString(),
+        };
+      }
     }
-  );
-  return handleResponse<ConnectionTestResult>(response);
+    // Unknown error
+    const unknownError: ConnectionError = {
+      code: 'UNKNOWN_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      retryable: true,
+    };
+    return {
+      success: false,
+      status: 'error',
+      error: unknownError,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
 
 /**

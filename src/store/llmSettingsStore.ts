@@ -24,6 +24,7 @@ export interface LLMSettingsState {
   error: string | null;
   testingProvider: LLMProvider | null;
   connectionTestResults: Map<LLMProvider, ConnectionTestResult>;
+  pendingTests: Set<LLMProvider>; // Track pending tests to prevent duplicates
 
   // Computed/Helper
   getProviderSettings: (provider: LLMProvider) => LLMProviderSettings | undefined;
@@ -52,6 +53,7 @@ export interface LLMSettingsActions {
   // State management
   clearSettings: () => void;
   clearError: () => void;
+  isPendingTest: (provider: LLMProvider) => boolean; // Check if test is pending
 }
 
 /**
@@ -71,6 +73,7 @@ export const useLLMSettingsStore = create<LLMSettingsStore>()(
       error: null,
       testingProvider: null,
       connectionTestResults: new Map(),
+      pendingTests: new Set(),
 
       // Helper methods
       getProviderSettings: (provider: LLMProvider) => {
@@ -138,7 +141,37 @@ export const useLLMSettingsStore = create<LLMSettingsStore>()(
       },
 
       testConnection: async (projectId: string, provider: LLMProvider) => {
-        set({ testingProvider: provider, error: null }, false, 'testConnection/start');
+        // Prevent duplicate requests
+        const { pendingTests } = get();
+        if (pendingTests.has(provider)) {
+          // Return existing pending test result or throw
+          return get().connectionTestResults.get(provider) || {
+            success: false,
+            status: 'error',
+            error: {
+              code: 'UNKNOWN_ERROR',
+              message: 'Test already in progress',
+              retryable: false,
+            },
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+        // Mark test as pending
+        set(
+          state => {
+            const newPending = new Set(state.pendingTests);
+            newPending.add(provider);
+            return {
+              testingProvider: provider,
+              error: null,
+              pendingTests: newPending,
+            };
+          },
+          false,
+          'testConnection/start'
+        );
+
         try {
           const result = await llmSettingsService.testProviderConnection(projectId, provider);
 
@@ -147,9 +180,12 @@ export const useLLMSettingsStore = create<LLMSettingsStore>()(
             state => {
               const newResults = new Map(state.connectionTestResults);
               newResults.set(provider, result);
+              const newPending = new Set(state.pendingTests);
+              newPending.delete(provider);
               return {
                 testingProvider: null,
                 connectionTestResults: newResults,
+                pendingTests: newPending,
               };
             },
             false,
@@ -164,17 +200,22 @@ export const useLLMSettingsStore = create<LLMSettingsStore>()(
         } catch (error) {
           const errorResult: ConnectionTestResult = {
             success: false,
+            status: 'error',
             error: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: new Date().toISOString(),
           };
 
           set(
             state => {
               const newResults = new Map(state.connectionTestResults);
               newResults.set(provider, errorResult);
+              const newPending = new Set(state.pendingTests);
+              newPending.delete(provider);
               return {
                 testingProvider: null,
-                error: errorResult.error,
+                error: typeof errorResult.error === 'string' ? errorResult.error : errorResult.error?.message || 'Unknown error',
                 connectionTestResults: newResults,
+                pendingTests: newPending,
               };
             },
             false,
@@ -216,6 +257,7 @@ export const useLLMSettingsStore = create<LLMSettingsStore>()(
             error: null,
             testingProvider: null,
             connectionTestResults: new Map(),
+            pendingTests: new Set(),
           },
           false,
           'clearSettings'
@@ -224,6 +266,10 @@ export const useLLMSettingsStore = create<LLMSettingsStore>()(
 
       clearError: () => {
         set({ error: null }, false, 'clearError');
+      },
+
+      isPendingTest: (provider: LLMProvider) => {
+        return get().pendingTests.has(provider);
       },
     }),
     { name: 'LLMSettingsStore' }
