@@ -63,11 +63,23 @@ export interface UseAIGenerationReturn extends AIGenerationState {
   /** Analyze code structure */
   analyzeCode: (request: AnalyzeCodeRequest) => Promise<void>;
   /** Generate design document from Q&A responses */
-  generateDesignDocument: (request: GenerateDesignDocumentRequest) => Promise<void>;
+  generateDesignDocument: (
+    request: GenerateDesignDocumentRequest,
+    projectId?: string,
+    taskId?: string
+  ) => Promise<void>;
   /** Generate PRD from design document */
-  generatePRD: (request: GeneratePRDRequest) => Promise<void>;
+  generatePRD: (
+    request: GeneratePRDRequest,
+    projectId?: string,
+    taskId?: string
+  ) => Promise<void>;
   /** Generate prototype HTML from PRD */
-  generatePrototype: (request: GeneratePrototypeRequest) => Promise<void>;
+  generatePrototype: (
+    request: GeneratePrototypeRequest,
+    projectId?: string,
+    taskId?: string
+  ) => Promise<void>;
   /** Analyze features and extract keywords */
   analyzeFeatures: (request: AnalyzeFeaturesRequest) => Promise<void>;
   /** Modify existing document */
@@ -196,8 +208,17 @@ export function useAIGeneration(): UseAIGenerationReturn {
    * Generate design document from Q&A responses
    */
   const generateDesignDocument = useCallback(
-    async (request: GenerateDesignDocumentRequest): Promise<void> => {
-      await executeWithLoading(() => apiGenerateDesignDocument(request));
+    async (
+      request: GenerateDesignDocumentRequest,
+      projectId?: string,
+      taskId?: string
+    ): Promise<void> => {
+      const enhancedRequest = {
+        ...request,
+        ...(projectId !== undefined && { projectId }),
+        ...(taskId !== undefined && { taskId }),
+      };
+      await executeWithLoading(() => apiGenerateDesignDocument(enhancedRequest));
     },
     [executeWithLoading]
   );
@@ -206,8 +227,17 @@ export function useAIGeneration(): UseAIGenerationReturn {
    * Generate PRD from design document
    */
   const generatePRD = useCallback(
-    async (request: GeneratePRDRequest): Promise<void> => {
-      await executeWithLoading(() => apiGeneratePRD(request));
+    async (
+      request: GeneratePRDRequest,
+      projectId?: string,
+      taskId?: string
+    ): Promise<void> => {
+      const enhancedRequest = {
+        ...request,
+        ...(projectId !== undefined && { projectId }),
+        ...(taskId !== undefined && { taskId }),
+      };
+      await executeWithLoading(() => apiGeneratePRD(enhancedRequest));
     },
     [executeWithLoading]
   );
@@ -216,8 +246,17 @@ export function useAIGeneration(): UseAIGenerationReturn {
    * Generate prototype HTML from PRD
    */
   const generatePrototype = useCallback(
-    async (request: GeneratePrototypeRequest): Promise<void> => {
-      await executeWithLoading(() => apiGeneratePrototype(request));
+    async (
+      request: GeneratePrototypeRequest,
+      projectId?: string,
+      taskId?: string
+    ): Promise<void> => {
+      const enhancedRequest = {
+        ...request,
+        ...(projectId !== undefined && { projectId }),
+        ...(taskId !== undefined && { taskId }),
+      };
+      await executeWithLoading(() => apiGeneratePrototype(enhancedRequest));
     },
     [executeWithLoading]
   );

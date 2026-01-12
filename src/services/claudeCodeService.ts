@@ -96,6 +96,8 @@ export interface GenerateDesignDocumentRequest {
   qaResponses: QAResponseItem[];
   referenceSystemIds?: ReferenceSystemItem[];
   workingDir?: string;
+  projectId?: string;
+  taskId?: string;
 }
 
 /**
@@ -105,6 +107,8 @@ export interface GeneratePRDRequest {
   designDocContent: string;
   projectContext?: string;
   workingDir?: string;
+  projectId?: string;
+  taskId?: string;
 }
 
 /**
@@ -114,6 +118,8 @@ export interface GeneratePrototypeRequest {
   prdContent: string;
   styleFramework?: string;
   workingDir?: string;
+  projectId?: string;
+  taskId?: string;
 }
 
 /**
@@ -197,8 +203,9 @@ export class ClaudeCodeServiceError extends Error {
 
 /**
  * Make API request to generation endpoint
+ * @internal Exported for testing purposes only
  */
-async function makeRequest(
+export async function makeRequest(
   endpoint: string,
   body: unknown
 ): Promise<AIGenerationResponse> {
