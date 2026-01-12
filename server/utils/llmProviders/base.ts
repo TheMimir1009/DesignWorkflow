@@ -126,6 +126,12 @@ export interface LLMProviderInterface {
    * @returns Array of model identifiers
    */
   getAvailableModels(): Promise<string[]>;
+
+  /**
+   * 메모리 누수 수정: provider 인스턴스 정리 및 리소스 해제
+   * 타이머, 연결 등 리소스를 정리하여 메모리 누수 방지
+   */
+  cleanup?(): void;
 }
 
 /**
@@ -136,6 +142,7 @@ export interface ProviderConfig {
   endpoint?: string;
   logger?: LLMLogger; // Optional shared logger instance
   retryConfig?: Partial<RetryConfig>; // Optional retry configuration
+  requiresAuth?: boolean; // Whether provider requires Authorization header (default: true)
 }
 
 /**
@@ -188,12 +195,14 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
   protected endpoint: string;
   protected logger: LLMLogger;
   protected retryConfig: RetryConfig;
+  protected requiresAuth: boolean; // Whether Authorization header should be included
 
   constructor(config: ProviderConfig, defaultEndpoint: string) {
     this.apiKey = config.apiKey || '';
     this.endpoint = config.endpoint || defaultEndpoint;
     this.logger = config.logger || new LLMLogger();
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...config.retryConfig };
+    this.requiresAuth = config.requiresAuth ?? true; // Default to true for most providers
   }
 
   abstract generate(prompt: string, config: LLMModelConfig, workingDir?: string): Promise<LLMResult>;
@@ -207,10 +216,12 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
   async testConnection(projectId?: string): Promise<ConnectionTestResult> {
     const startTime = Date.now();
     const testId = `test-${this.provider}-${Date.now()}`;
+    console.log('[DEBUG] testConnection called, provider:', this.provider, 'projectId:', projectId);
 
     try {
       // Log connection test start if projectId is provided (SPEC-LLM-002)
       if (projectId) {
+        console.log('[DEBUG] Calling logConnectionTestStart for testId:', testId);
         this.logger.logConnectionTestStart({
           id: testId,
           timestamp: new Date().toISOString(),
@@ -341,12 +352,18 @@ export abstract class BaseHTTPProvider implements LLMProviderInterface {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Only add Authorization header if requiresAuth is true
+      if (this.requiresAuth) {
+        headers['Authorization'] = `Bearer ${this.apiKey}`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
+        headers,
         body: JSON.stringify(body),
         signal: controller.signal,
       });

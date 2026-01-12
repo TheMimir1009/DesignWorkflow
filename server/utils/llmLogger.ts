@@ -109,7 +109,10 @@ export interface ConnectionTestFailureParams {
 export class LLMLogger {
   private logs: Map<string, LLMLogEntry> = new Map();
   private logOrder: string[] = [];
-  private readonly MAX_LOGS = 1000;
+  // 메모리 누수 수정: 최대 로그 개수를 1000에서 100으로 축소하여 메모리 사용량 감소
+  private readonly MAX_LOGS = 100;
+  // 메모리 누수 수정: 개별 로그 항목의 최대 크기를 10KB로 제한
+  private readonly MAX_LOG_SIZE = 10 * 1024; // 10KB in bytes
 
   /**
    * Log a request to the LLM API
@@ -309,6 +312,9 @@ export class LLMLogger {
    * Add a log entry maintaining order and rotation
    */
   private addLog(id: string, entry: LLMLogEntry): void {
+    // 메모리 누수 수정: 로그 항목의 크기를 제한하여 대형 로그 항목이 메모리를 과도하게 사용하지 않도록 방지
+    const sizeLimitedEntry = this.limitLogSize(entry);
+
     // If updating existing entry, don't add to order again
     if (!this.logs.has(id)) {
       this.logOrder.push(id);
@@ -322,7 +328,41 @@ export class LLMLogger {
       }
     }
 
-    this.logs.set(id, entry);
+    this.logs.set(id, sizeLimitedEntry);
+  }
+
+  /**
+   * 메모리 누수 수정: 로그 항목의 크기를 제한하여 대형 로그 항목이 메모리를 과도하게 사용하지 않도록 방지
+   * 주요 필드의 내용을 적절한 길이로 잘라내어 JSON 직렬화 크기를 제한
+   */
+  private limitLogSize(entry: LLMLogEntry): LLMLogEntry {
+    const limited: LLMLogEntry = { ...entry };
+
+    // 프롬프트 및 응답 내용 제한
+    if (limited.request?.prompt) {
+      limited.request.prompt = this.truncateString(limited.request.prompt, 1000);
+    }
+
+    if (limited.response?.content) {
+      limited.response.content = this.truncateString(limited.response.content, 2000);
+    }
+
+    // 에러 메시지 제한
+    if (limited.error?.message) {
+      limited.error.message = this.truncateString(limited.error.message, 500);
+    }
+
+    return limited;
+  }
+
+  /**
+   * 메모리 누수 수정: 문자열의 최대 길이를 제한하여 과도한 메모리 사용 방지
+   */
+  private truncateString(str: string, maxLength: number): string {
+    if (str.length <= maxLength) {
+      return str;
+    }
+    return str.substring(0, maxLength) + `... [truncated, total: ${str.length} chars]`;
   }
 
   /**

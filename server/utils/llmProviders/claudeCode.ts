@@ -16,6 +16,8 @@ import { LLMLogger } from '../llmLogger';
 export class ClaudeCodeProvider implements LLMProviderInterface {
   readonly provider = 'claude-code' as const;
   private logger: LLMLogger;
+  // 메모리 누수 수정: setTimeout ID를 저장하여 타이머 정리 가능
+  private testTimeoutId: NodeJS.Timeout | null = null;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(_config?: ProviderConfig) {
@@ -133,6 +135,9 @@ export class ClaudeCodeProvider implements LLMProviderInterface {
         });
 
         process.on('close', (code) => {
+          // 메모리 누수 수정: 타이머 정리
+          this.clearTestTimeout();
+
           if (code === 0) {
             resolve({
               success: true,
@@ -148,14 +153,17 @@ export class ClaudeCodeProvider implements LLMProviderInterface {
         });
 
         process.on('error', () => {
+          // 메모리 누수 수정: 타이머 정리
+          this.clearTestTimeout();
+
           resolve({
             success: false,
             error: 'Claude Code CLI not installed. Install with: npm install -g @anthropic-ai/claude-code',
           });
         });
 
-        // Timeout after 5 seconds
-        setTimeout(() => {
+        // 메모리 누수 수정: setTimeout ID를 저장하여 나중에 정리 가능
+        this.testTimeoutId = setTimeout(() => {
           process.kill();
           resolve({
             success: false,
@@ -164,11 +172,31 @@ export class ClaudeCodeProvider implements LLMProviderInterface {
         }, 5000);
       });
     } catch (error) {
+      // 메모리 누수 수정: 에러 발생 시에도 타이머 정리
+      this.clearTestTimeout();
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  }
+
+  /**
+   * 메모리 누수 수정: 테스트 타이머를 정리하여 메모리 누수 방지
+   */
+  private clearTestTimeout(): void {
+    if (this.testTimeoutId !== null) {
+      clearTimeout(this.testTimeoutId);
+      this.testTimeoutId = null;
+    }
+  }
+
+  /**
+   * 메모리 누수 수정: provider 인스턴스가 더 이상 필요하지 않을 때 정리
+   */
+  cleanup(): void {
+    this.clearTestTimeout();
   }
 
   async getAvailableModels(): Promise<string[]> {
