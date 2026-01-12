@@ -96,6 +96,7 @@ export function EnhancedDocumentEditor({
     retryDelay: 10000,
     currentAttempt: 0,
   });
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // 메모리 누수 방지: retry 타이머 추적
   const editorViewRef = useRef<EditorView | null>(null);
   const contentRef = useRef(content);
 
@@ -138,7 +139,8 @@ export function EnhancedDocumentEditor({
 
         if (!isLastAttempt) {
           retryConfig.currentAttempt++;
-          setTimeout(() => {
+          // 메모리 누수 방지: retry 타이머를 ref에 저장하여 cleanup 가능하게 함
+          retryTimerRef.current = setTimeout(() => {
             // Retry the save operation
             onSave(contentToSave)
               .then(() => {
@@ -291,11 +293,17 @@ export function EnhancedDocumentEditor({
 
   /**
    * Cleanup on unmount
+   * 메모리 누수 방지: 모든 타이머(debounce, retry)를 cleanup
    */
   useEffect(() => {
     return () => {
+      // Clear debounce timer
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
+      }
+      // Clear retry timer
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
       }
     };
   }, []);

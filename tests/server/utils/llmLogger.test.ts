@@ -252,9 +252,10 @@ describe('LLMLogger', () => {
   });
 
   describe('Log rotation', () => {
-    it('should maintain maximum of 1000 logs (FIFO)', () => {
-      // Add more than 1000 logs
-      for (let i = 0; i < 1050; i++) {
+    // 메모리 누수 수정: 최대 로그 개수가 1000에서 100으로 변경됨에 따라 테스트 업데이트
+    it('should maintain maximum of 100 logs (FIFO)', () => {
+      // Add more than 100 logs
+      for (let i = 0; i < 150; i++) {
         logger.logRequest({
           id: `id-${i}`,
           provider: 'openai',
@@ -263,16 +264,16 @@ describe('LLMLogger', () => {
       }
 
       const logs = logger.getLogs();
-      expect(logs).toHaveLength(1000);
+      expect(logs).toHaveLength(100);
       // First log should be id-50 (oldest 50 removed)
       expect(logs[0].id).toBe('id-50');
-      // Last log should be id-1049
-      expect(logs[999].id).toBe('id-1049');
+      // Last log should be id-149
+      expect(logs[99].id).toBe('id-149');
     });
 
     it('should preserve newest logs when limit exceeded', () => {
-      const maxLogs = 1000;
-      for (let i = 0; i < maxLogs + 100; i++) {
+      const maxLogs = 100; // 메모리 누수 수정: 최대 로그 개수 100으로 변경
+      for (let i = 0; i < maxLogs + 20; i++) {
         logger.logRequest({
           id: `id-${i}`,
           provider: 'openai',
@@ -282,7 +283,7 @@ describe('LLMLogger', () => {
 
       const logs = logger.getLogs();
       expect(logs).toHaveLength(maxLogs);
-      expect(logs[maxLogs - 1].id).toBe(`id-${maxLogs + 99}`);
+      expect(logs[maxLogs - 1].id).toBe(`id-${maxLogs + 19}`);
     });
   });
 

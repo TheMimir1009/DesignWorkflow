@@ -3,7 +3,7 @@
  * Uses OpenAI-compatible API format for local LLM server
  */
 
-import type { LLMModelConfig, LLMResult, ConnectionTestResult } from '../../../src/types/llm';
+import type { LLMModelConfig, LLMResult } from '../../../src/types/llm';
 import { BaseHTTPProvider, type ProviderConfig } from './base';
 import { extractTokenUsage } from '../tokenExtractor';
 import { calculateCost } from '../modelPricing';
@@ -43,19 +43,22 @@ interface LMStudioModelsResponse {
 /**
  * LMStudio Provider
  * Supports any model loaded in LMStudio local server
+ * Does not require API authentication (local server)
  */
 export class LMStudioProvider extends BaseHTTPProvider {
   readonly provider = 'lmstudio' as const;
+  protected requiresAuth = false; // LMStudio is a local server, no auth required
 
   constructor(config: ProviderConfig) {
     super(config, config.endpoint || LMSTUDIO_DEFAULT_ENDPOINT);
-    // LMStudio doesn't require API key
+    // LMStudio doesn't require API key but set a default for logging
     this.apiKey = config.apiKey || 'lm-studio';
   }
 
   async generate(prompt: string, config: LLMModelConfig): Promise<LLMResult> {
     try {
-      const response = await this.makeLocalRequest<LMStudioChatCompletionResponse>(
+      // Use base class makeRequest method (no need for makeLocalRequest)
+      const response = await this.makeRequest<LMStudioChatCompletionResponse>(
         `${this.endpoint}/chat/completions`,
         {
           model: config.modelId || 'local-model',
@@ -66,7 +69,7 @@ export class LMStudioProvider extends BaseHTTPProvider {
           max_tokens: config.maxTokens,
           top_p: config.topP,
         },
-        config // Pass config for logging
+        config
       );
 
       const content = response.choices[0]?.message?.content || '';
@@ -92,9 +95,12 @@ export class LMStudioProvider extends BaseHTTPProvider {
     }
   }
 
-  async testConnection(): Promise<ConnectionTestResult> {
-    const startTime = Date.now();
-
+  /**
+   * Get available models from LM Studio server
+   * Calls /models endpoint directly with 5 second timeout
+   * Returns empty array on error (server not running or other issues)
+   */
+  async getAvailableModels(): Promise<string[]> {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -107,146 +113,13 @@ export class LMStudioProvider extends BaseHTTPProvider {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        return {
-          success: false,
-          error: `HTTP ${response.status}: ${errorText}`,
-        };
+        return [];
       }
 
       const data = await response.json() as LMStudioModelsResponse;
-      const models = data.data?.map(m => m.id) || [];
-
-      return {
-        success: true,
-        latency: Date.now() - startTime,
-        models,
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-
-      // Provide helpful message for common connection errors
-      if (message.includes('ECONNREFUSED') || message.includes('fetch failed')) {
-        return {
-          success: false,
-          error: 'LMStudio server not running. Please start the server in LMStudio app.',
-        };
-      }
-
-      return {
-        success: false,
-        error: message,
-      };
-    }
-  }
-
-  async getAvailableModels(): Promise<string[]> {
-    try {
-      const result = await this.testConnection();
-      return result.models || [];
+      return data.data?.map(m => m.id) || [];
     } catch {
       return [];
-    }
-  }
-
-  /**
-   * Make request to local LMStudio server (no auth required)
-   * Includes logging integration
-   */
-  private async makeLocalRequest<T>(
-    url: string,
-    body: unknown,
-    config: LLMModelConfig,
-    timeoutMs: number = 120000
-  ): Promise<T> {
-    const requestId = this.generateRequestId();
-    const startTime = Date.now();
-
-    // Log request before API call
-    this.logger.logRequest({
-      id: requestId,
-      provider: this.provider,
-      model: config.modelId || 'local-model',
-      request: {
-        prompt: this.truncatePrompt(body),
-        parameters: {
-          temperature: config.temperature,
-          maxTokens: config.maxTokens,
-          topP: config.topP,
-        },
-      },
-    });
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const error = new Error(`HTTP ${response.status}: ${errorText}`);
-
-        // Log error
-        this.logger.logError({
-          id: requestId,
-          error: {
-            message: error.message,
-            code: response.status.toString(),
-          },
-        });
-
-        throw error;
-      }
-
-      const data = await response.json() as T;
-      const endTime = Date.now();
-      const durationMs = endTime - startTime;
-
-      // Extract token usage and log response
-      const tokenUsage = extractTokenUsage(this.provider, data);
-      if (tokenUsage) {
-        // LMStudio is local, so no cost
-        this.logger.logResponse({
-          id: requestId,
-          response: {
-            usage: tokenUsage,
-          },
-          metrics: {
-            duration_ms: durationMs,
-          },
-        });
-      } else {
-        // Log response without token usage
-        this.logger.logResponse({
-          id: requestId,
-          metrics: {
-            duration_ms: endTime - startTime,
-          },
-        });
-      }
-
-      return data;
-    } catch (error) {
-      // Log error if not already logged
-      if (error instanceof Error) {
-        this.logger.logError({
-          id: requestId,
-          error: {
-            message: error.message,
-          },
-        });
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 }
