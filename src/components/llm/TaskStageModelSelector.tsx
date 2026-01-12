@@ -14,11 +14,13 @@ import {
   AVAILABLE_MODELS,
   DEFAULT_MODEL_PARAMS,
 } from '../../types/llm';
+import { getProviderModels } from '../../services/llmSettingsService';
 
 export interface TaskStageModelSelectorProps {
   taskStageConfig: Partial<TaskStageConfig>;
   enabledProviders: LLMProviderSettings[];
   onUpdate: (config: Partial<TaskStageConfig>) => void;
+  projectId: string;
 }
 
 type TaskStage = keyof TaskStageConfig;
@@ -47,6 +49,7 @@ interface StageConfigEditorProps {
   config: LLMModelConfig | null;
   enabledProviders: LLMProviderSettings[];
   onUpdate: (config: LLMModelConfig | null) => void;
+  projectId: string;
 }
 
 function StageConfigEditor({
@@ -55,13 +58,43 @@ function StageConfigEditor({
   config,
   enabledProviders,
   onUpdate,
+  projectId,
 }: StageConfigEditorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [localConfig, setLocalConfig] = useState<LLMModelConfig | null>(config);
 
+  // TASK-001: Add dynamic model state variables
+  const [dynamicModels, setDynamicModels] = useState<Record<LLMProvider, string[]>>({
+    lmstudio: [],
+  });
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelLoadError, setModelLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     setLocalConfig(config);
   }, [config]);
+
+  // TASK-002: Add useEffect to fetch models for LM Studio
+  useEffect(() => {
+    const fetchModelsForProvider = async (provider: LLMProvider, pid: string) => {
+      if (provider !== 'lmstudio') return;
+      setIsLoadingModels(true);
+      setModelLoadError(null);
+      try {
+        const models = await getProviderModels(pid, provider);
+        setDynamicModels(prev => ({ ...prev, [provider]: models }));
+      } catch (error) {
+        setModelLoadError(error instanceof Error ? error.message : '모델 목록을 가져오지 못했습니다');
+        setDynamicModels(prev => ({ ...prev, [provider]: [] }));
+      } finally {
+        setIsLoadingModels(false);
+      }
+    };
+
+    if (localConfig?.provider && projectId) {
+      fetchModelsForProvider(localConfig.provider, projectId);
+    }
+  }, [localConfig?.provider, projectId]);
 
   const handleProviderChange = (provider: LLMProvider) => {
     const models = AVAILABLE_MODELS[provider] || [];
@@ -96,8 +129,11 @@ function StageConfigEditor({
     onUpdate(null as unknown as LLMModelConfig);
   };
 
+  // TASK-003: Modify availableModels calculation logic
   const availableModels = localConfig
-    ? AVAILABLE_MODELS[localConfig.provider] || []
+    ? (localConfig.provider === 'lmstudio'
+        ? dynamicModels.lmstudio
+        : AVAILABLE_MODELS[localConfig.provider]) || []
     : [];
 
   return (
@@ -153,18 +189,67 @@ function StageConfigEditor({
 
             <div>
               <label className="block text-sm text-gray-400 mb-1">모델</label>
-              <select
-                value={localConfig?.modelId || ''}
-                onChange={(e) => handleModelChange(e.target.value)}
-                disabled={!localConfig}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {availableModels.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
+              {/* TASK-004: Loading UI */}
+              {isLoadingModels ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg">
+                  <svg
+                    className="animate-spin h-4 w-4 text-blue-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  <span className="text-sm text-gray-400">모델 목록을 가져오는 중...</span>
+                </div>
+              ) : modelLoadError ? (
+                /* TASK-005: Error UI */
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-yellow-500">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <span className="text-sm">{modelLoadError}</span>
+                </div>
+              ) : availableModels.length === 0 && localConfig?.provider === 'lmstudio' ? (
+                /* TASK-006: Empty list message */
+                <div className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-500">
+                  <span className="text-sm">사용 가능한 모델이 없습니다...</span>
+                </div>
+              ) : (
+                <select
+                  value={localConfig?.modelId || ''}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  disabled={!localConfig || isLoadingModels}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  {availableModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
@@ -238,6 +323,7 @@ export function TaskStageModelSelector({
   taskStageConfig,
   enabledProviders,
   onUpdate,
+  projectId,
 }: TaskStageModelSelectorProps) {
   const handleStageUpdate = (stage: TaskStage, config: LLMModelConfig | null) => {
     onUpdate({
@@ -250,12 +336,12 @@ export function TaskStageModelSelector({
       {TASK_STAGES.map((stage) => (
         <StageConfigEditor
           key={stage.id}
-          stage={stage.id}
           label={stage.label}
           description={stage.description}
           config={taskStageConfig[stage.id] || null}
           enabledProviders={enabledProviders}
           onUpdate={(config) => handleStageUpdate(stage.id, config)}
+          projectId={projectId}
         />
       ))}
     </div>
