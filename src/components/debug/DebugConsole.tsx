@@ -1,11 +1,13 @@
 /**
- * Debug Console Main Component (SPEC-DEBUG-001 TAG-004 TASK-006)
+ * Debug Console Main Component (SPEC-DEBUG-001 TAG-004 TASK-006, SPEC-DEBUG-003)
  *
  * Main LLM Debug Console component
  * REQ-E-001: Display Debug Console when menu is clicked
  * REQ-U-001: Only accessible in development mode
+ * SPEC-DEBUG-003: Auto-fetch logs from server on mount
  */
 
+import { useEffect } from 'react';
 import { isDebugConsoleAccessible } from '../../utils/accessControl';
 import { useDebugStore } from '../../store/debugStore';
 import { DebugHeader } from './DebugHeader';
@@ -17,7 +19,14 @@ import { LogDetailModal } from './LogDetailModal';
 export function DebugConsole() {
   // REQ-W-001: System must not display Debug Console in production
   // Hooks must be called unconditionally at the top level
-  const { logs } = useDebugStore();
+  const { logs, fetchLogsFromServer, isOpen } = useDebugStore();
+
+  // SPEC-DEBUG-003: Fetch logs from server when console opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchLogsFromServer();
+    }
+  }, [isOpen, fetchLogsFromServer]);
 
   if (!isDebugConsoleAccessible()) {
     return null;

@@ -7,6 +7,11 @@ import { create } from 'zustand';
 import type { DebugState, LLMCallLog, DebugFilters } from '../types/debug';
 import { calculateCost } from '../config/modelPricing';
 
+/**
+ * API base URL for debug endpoints
+ */
+const API_BASE_URL = 'http://localhost:3001';
+
 const MAX_LOGS = 1000;
 
 const createDebugStore = () => {
@@ -183,6 +188,113 @@ const createDebugStore = () => {
     // SPEC-DEBUG-002: Direct console open/close control
     setIsOpen: (open: boolean) => {
       set({ isOpen: open });
+    },
+
+    // SPEC-DEBUG-003: Fetch logs from server (replaces all logs)
+    fetchLogsFromServer: async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/debug/logs`);
+        if (!response.ok) {
+          console.error('Failed to fetch logs from server');
+          return;
+        }
+
+        const json = await response.json();
+        if (json.success && json.data) {
+          const serverLogs = json.data;
+
+          // Transform server logs to client format
+          const transformedLogs: LLMCallLog[] = serverLogs.map((log: any) => ({
+            id: log.id,
+            timestamp: log.timestamp,
+            model: log.model,
+            provider: log.provider,
+            endpoint: log.endpoint || 'api',
+            method: 'POST',
+            status: log.status || 'success',
+            statusCode: log.statusCode,
+            duration: log.duration,
+            error: log.error,
+            requestHeaders: {},
+            requestBody: log.request,
+            responseHeaders: {},
+            responseBody: log.response,
+            inputTokens: log.inputTokens,
+            outputTokens: log.outputTokens,
+            totalTokens: log.totalTokens,
+            cost: log.cost,
+          }));
+
+          // Replace all logs with server logs
+          set({ logs: transformedLogs });
+
+          // Update stats
+          const stats = {
+            totalRequests: transformedLogs.length,
+            successCount: transformedLogs.filter((l) => l.status === 'success').length,
+            errorCount: transformedLogs.filter((l) => l.status === 'error').length,
+            totalTokens: transformedLogs.reduce((sum, l) => sum + (l.totalTokens || 0), 0),
+            totalCost: transformedLogs.reduce((sum, l) => sum + (l.cost || 0), 0),
+          };
+          set({ stats });
+        }
+      } catch (error) {
+        console.error('Error fetching logs from server:', error);
+      }
+    },
+
+    // SPEC-DEBUG-003: Sync logs from server (adds new logs only)
+    syncLogsFromServer: async (lastTimestamp?: string) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/debug/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lastTimestamp }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to sync logs from server');
+          return;
+        }
+
+        const json = await response.json();
+        if (json.success && json.data) {
+          const { logs: serverLogs } = json.data;
+
+          // Transform and merge logs
+          const existingLogIds = new Set(get().logs.map((l) => l.id));
+          const newLogs: LLMCallLog[] = serverLogs
+            .filter((log: any) => !existingLogIds.has(log.id))
+            .map((log: any) => ({
+              id: log.id,
+              timestamp: log.timestamp,
+              model: log.model,
+              provider: log.provider,
+              endpoint: log.endpoint || 'api',
+              method: 'POST',
+              status: log.status || 'success',
+              statusCode: log.statusCode,
+              duration: log.duration,
+              error: log.error,
+              requestHeaders: {},
+              requestBody: log.request,
+              responseHeaders: {},
+              responseBody: log.response,
+              inputTokens: log.inputTokens,
+              outputTokens: log.outputTokens,
+              totalTokens: log.totalTokens,
+              cost: log.cost,
+            }));
+
+          if (newLogs.length > 0) {
+            set((state) => ({
+              logs: [...state.logs, ...newLogs].slice(-MAX_LOGS),
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing logs from server:', error);
+      }
     },
   }));
 };

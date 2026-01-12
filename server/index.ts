@@ -25,6 +25,7 @@ import {
 import { analyticsRouter } from './routes/analytics.ts';
 import { discoverProjectSystems } from './routes/discovery.ts';
 import { llmSettingsRouter } from './routes/llmSettings.ts';
+import { debugRouter } from './routes/debug.ts';
 import {
   getProjectCompletedDocuments,
   getProjectCompletedDocument,
@@ -96,6 +97,9 @@ export function createApp(): Express {
 
   // LLM Settings routes (SPEC-LLM-001)
   app.use('/api/projects', llmSettingsRouter);
+
+  // Debug routes (SPEC-DEBUG-003)
+  app.use('/api/debug', debugRouter);
 
   return app;
 }

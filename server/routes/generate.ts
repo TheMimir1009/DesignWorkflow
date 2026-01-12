@@ -25,7 +25,7 @@ import {
   type ProjectContext,
 } from '../utils/promptBuilder.ts';
 import { getLLMSettingsOrDefault } from '../utils/llmSettingsStorage.ts';
-import { createLLMProvider, type LLMProviderInterface } from '../utils/llmProvider.ts';
+import { createLLMProvider, type LLMProviderInterface, getSharedLogger } from '../utils/llmProvider.ts';
 import {
   getModelConfigForStage,
   isProviderConfigured,
@@ -130,11 +130,15 @@ interface LLMProviderSelection {
  * Select LLM provider based on project settings and task stage
  * Returns the appropriate provider or throws an error if not available
  * NO AUTO-FALLBACK: If configured provider fails validation, error is returned
+ * Always uses shared logger for debug console (SPEC-DEBUG-003)
  */
 async function selectLLMProvider(
   projectId: string | undefined,
   stage: TaskStage
 ): Promise<LLMProviderSelection> {
+  // Get shared logger for debug console
+  const sharedLogger = getSharedLogger();
+
   // If no projectId, use default Claude Code
   if (!projectId) {
     const settings = await getLLMSettingsOrDefault('default');
@@ -145,7 +149,7 @@ async function selectLLMProvider(
         apiKey: '',
         isEnabled: true,
         connectionStatus: 'connected',
-      }),
+      }, true), // Enable shared logging
       config,
       isDefault: true,
     };
@@ -163,7 +167,7 @@ async function selectLLMProvider(
         apiKey: '',
         isEnabled: true,
         connectionStatus: 'connected',
-      }),
+      }, true), // Enable shared logging
       config: modelConfig,
       isDefault: true,
     };
@@ -200,9 +204,9 @@ async function selectLLMProvider(
     );
   }
 
-  // Create and return the provider
+  // Create and return the provider with shared logging
   return {
-    provider: createLLMProvider(providerSettings),
+    provider: createLLMProvider(providerSettings, true), // Enable shared logging
     config: modelConfig,
     isDefault: false,
   };

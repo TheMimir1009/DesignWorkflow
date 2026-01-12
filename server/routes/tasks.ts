@@ -37,6 +37,7 @@ import { getLLMSettingsOrDefault } from '../utils/llmSettingsStorage.ts';
 import { createLLMProvider, type LLMProviderInterface } from '../utils/llmProvider.ts';
 import {
   getModelConfigForStage,
+  isProviderConfigured,
   type LLMModelConfig,
   type TaskStage,
   type LLMProvider,
@@ -57,6 +58,7 @@ interface LLMProviderSelection {
 /**
  * Select LLM provider based on project settings and task stage
  * SPEC-DEBUG-004: Copied from generate.ts to support task AI generation with configured providers
+ * SPEC-DEBUG-003: Always uses shared logger for debug console
  * Returns the appropriate provider based on project LLM settings
  */
 async function selectLLMProvider(
@@ -70,8 +72,10 @@ async function selectLLMProvider(
     return {
       provider: createLLMProvider({
         provider: 'claude-code',
-        settings,
-      }),
+        apiKey: '',
+        isEnabled: true,
+        connectionStatus: 'connected',
+      }, true), // Enable shared logging
       config,
       isDefault: true,
     };
@@ -79,14 +83,49 @@ async function selectLLMProvider(
 
   // Get project-specific LLM settings
   const settings = await getLLMSettingsOrDefault(projectId);
-  const config = getModelConfigForStage(settings, stage);
+  const modelConfig = getModelConfigForStage(settings, stage);
 
+  // Check if using default (Claude Code)
+  if (modelConfig.provider === 'claude-code') {
+    return {
+      provider: createLLMProvider({
+        provider: 'claude-code',
+        apiKey: '',
+        isEnabled: true,
+        connectionStatus: 'connected',
+      }, true), // Enable shared logging
+      config: modelConfig,
+      isDefault: true,
+    };
+  }
+
+  // Find the provider settings
+  const providerSettings = settings.providers.find(
+    (p) => p.provider === modelConfig.provider
+  );
+
+  if (!providerSettings) {
+    throw new Error(`Provider ${modelConfig.provider} not found in settings`);
+  }
+
+  // Check if provider is enabled
+  if (!providerSettings.isEnabled) {
+    throw new Error(`Provider ${modelConfig.provider} is not enabled. Please enable it in project settings.`);
+  }
+
+  // Check if provider is configured (has API key or valid endpoint)
+  const isConfigured = providerSettings.provider === 'lmstudio'
+    ? (providerSettings.endpoint !== undefined && providerSettings.endpoint.length > 0)
+    : (providerSettings.apiKey.length > 0);
+
+  if (!isConfigured) {
+    throw new Error(`Provider ${modelConfig.provider} is not configured. Please add API key or configure endpoint.`);
+  }
+
+  // Create and return the provider with shared logging
   return {
-    provider: createLLMProvider({
-      provider: config.provider,
-      settings,
-    }),
-    config,
+    provider: createLLMProvider(providerSettings, true), // Enable shared logging
+    config: modelConfig,
     isDefault: false,
   };
 }

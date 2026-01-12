@@ -89,6 +89,10 @@ export interface DebugState {
   // SPEC-DEBUG-002: Console toggle action
   toggle: () => void;
   setIsOpen: (open: boolean) => void;
+
+  // SPEC-DEBUG-003: Server log sync
+  fetchLogsFromServer: () => Promise<void>;
+  syncLogsFromServer: (lastTimestamp?: string) => Promise<void>;
 }
 
 /**

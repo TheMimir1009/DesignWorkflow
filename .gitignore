@@ -133,6 +133,15 @@ workspace/
 !.moai/specs/
 !.moai/specs/**
 
+# Ignore backup directories created by sync
+.moai-backups/
+
+# Ignore generated prototypes and temporary documentation
+prototype-*.html
+GDD-*.md
+PRD-*.md
+FEATURES.md
+
 .moai/cache/
 .moai/logs/
 .moai/docs/

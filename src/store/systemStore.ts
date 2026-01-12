@@ -11,40 +11,53 @@ import type { CreateSystemDto, UpdateSystemDto } from '../services/systemDocServ
 /**
  * Middleware to synchronize alias properties with primary state (bidirectional)
  * Ensures documents mirrors systems, selectedTags mirrors tagFilter, etc.
+ * Also handles devtools action name from 3rd argument
  */
 const syncAliasMiddleware = <T extends SystemStoreState & SystemStoreActions>(
   config: StateCreator<T, [], []>
-): StateCreator<T, [], []> => (set, get, api) => config(
-  (partial, replace, ...args) => {
-    const state = typeof partial === 'function' ? partial(get()) : partial;
-    const syncedState = { ...state } as Partial<T>;
+): StateCreator<T, [], []> => (set, get, api) => {
+  // Wrapped set that accepts 3rd argument for devtools action name
+  const wrappedSet = (
+    partial: T | Partial<T> | ((state: T) => T | Partial<T>),
+    replace?: boolean,
+    actionName?: string
+  ) => {
+    // Ignore 3rd argument - devtools middleware handles action naming differently in v5
+    set(partial, replace);
+  };
 
-    // Bidirectional sync: systems <-> documents
-    if ('systems' in syncedState && !('documents' in syncedState)) {
-      syncedState.documents = syncedState.systems as SystemDocument[];
-    } else if ('documents' in syncedState && !('systems' in syncedState)) {
-      syncedState.systems = syncedState.documents as SystemDocument[];
-    }
+  return config(
+    (partial, replace, ...args) => {
+      const state = typeof partial === 'function' ? partial(get()) : partial;
+      const syncedState = { ...state } as Partial<T>;
 
-    // Bidirectional sync: tagFilter <-> selectedTags
-    if ('tagFilter' in syncedState && !('selectedTags' in syncedState)) {
-      syncedState.selectedTags = syncedState.tagFilter as string[];
-    } else if ('selectedTags' in syncedState && !('tagFilter' in syncedState)) {
-      syncedState.tagFilter = syncedState.selectedTags as string[];
-    }
+      // Bidirectional sync: systems <-> documents
+      if ('systems' in syncedState && !('documents' in syncedState)) {
+        syncedState.documents = syncedState.systems as SystemDocument[];
+      } else if ('documents' in syncedState && !('systems' in syncedState)) {
+        syncedState.systems = syncedState.documents as SystemDocument[];
+      }
 
-    // Bidirectional sync: categoryFilter <-> selectedCategory
-    if ('categoryFilter' in syncedState && !('selectedCategory' in syncedState)) {
-      syncedState.selectedCategory = syncedState.categoryFilter as string | null;
-    } else if ('selectedCategory' in syncedState && !('categoryFilter' in syncedState)) {
-      syncedState.categoryFilter = syncedState.selectedCategory as string | null;
-    }
+      // Bidirectional sync: tagFilter <-> selectedTags
+      if ('tagFilter' in syncedState && !('selectedTags' in syncedState)) {
+        syncedState.selectedTags = syncedState.tagFilter as string[];
+      } else if ('selectedTags' in syncedState && !('tagFilter' in syncedState)) {
+        syncedState.tagFilter = syncedState.selectedTags as string[];
+      }
 
-    set(syncedState as T | Partial<T> | ((state: T) => T | Partial<T>), replace);
-  },
-  get,
-  api
-);
+      // Bidirectional sync: categoryFilter <-> selectedCategory
+      if ('categoryFilter' in syncedState && !('selectedCategory' in syncedState)) {
+        syncedState.selectedCategory = syncedState.categoryFilter as string | null;
+      } else if ('selectedCategory' in syncedState && !('categoryFilter' in syncedState)) {
+        syncedState.categoryFilter = syncedState.selectedCategory as string | null;
+      }
+
+      set(syncedState as T | Partial<T> | ((state: T) => T | Partial<T>), replace);
+    },
+    get,
+    api
+  );
+};
 
 /**
  * System store state interface
