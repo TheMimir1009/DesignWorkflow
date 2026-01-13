@@ -105,6 +105,7 @@ export function LLMSettingsTab({ projectId }: LLMSettingsTabProps) {
           taskStageConfig={settings?.taskStageConfig || {}}
           enabledProviders={settings?.providers.filter(p => p.isEnabled) || []}
           onUpdate={(config) => updateTaskStageConfig(projectId, config)}
+          projectId={projectId}
         />
       </section>
 

@@ -109,11 +109,22 @@ export function ColumnLLMSettingsModal({
     };
 
     const currentProvider = localConfig?.provider || null;
-    const providerChanged = prevProviderRef.current !== currentProvider;
 
-    if (currentProvider && projectId && providerChanged) {
+    // SPEC-LLM-004 FIX: Only fetch if:
+    // 1. Provider is lmstudio, AND
+    // 2. projectId exists, AND
+    // 3. Either this is initial mount (ref is null) OR provider has changed
+    if (currentProvider === 'lmstudio' && projectId) {
+      const providerChanged = prevProviderRef.current !== currentProvider;
+      if (providerChanged) {
+        prevProviderRef.current = currentProvider;
+        fetchModelsForProvider(currentProvider, projectId);
+      }
+    }
+    // SPEC-LLM-004 FIX: Reset ref when provider is NOT lmstudio
+    // This allows re-fetch when switching back to LM Studio from another provider
+    else if (currentProvider && currentProvider !== 'lmstudio') {
       prevProviderRef.current = currentProvider;
-      fetchModelsForProvider(currentProvider, projectId);
     }
   }, [localConfig?.provider, projectId]);
 
