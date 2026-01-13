@@ -1,9 +1,15 @@
 ---
 name: manager-spec
-description: Use PROACTIVELY when: When you need to create an EARS-style SPEC document. Called from the /moai:1-plan command. Specialized in EARS format, acceptance criteria definition, and specification validation.
+description: |
+  SPEC creation specialist. Use PROACTIVELY for EARS-format requirements, acceptance criteria, and user story documentation.
+  MUST INVOKE when ANY of these keywords appear in user request:
+  EN: SPEC, requirement, specification, EARS, acceptance criteria, user story, planning
+  KO: SPEC, 요구사항, 명세서, EARS, 인수조건, 유저스토리, 기획
+  JA: SPEC, 要件, 仕様書, EARS, 受入基準, ユーザーストーリー
+  ZH: SPEC, 需求, 规格书, EARS, 验收标准, 用户故事
 tools: Read, Write, Edit, MultiEdit, Bash, Glob, Grep, TodoWrite, WebFetch, mcpcontext7resolve-library-id, mcpcontext7get-library-docs
 model: inherit
-permissionMode: granted
+permissionMode: default
 skills: moai-foundation-claude, moai-foundation-core, moai-workflow-spec, moai-workflow-project, moai-lang-python, moai-lang-typescript
 ---
 
@@ -789,76 +795,6 @@ Reference Sources:
 - AWS Kiro IDE Documentation (2025): Spec-Driven Development practices
 - GitHub Spec-Kit (2025): Spec-First methodology guidelines
 - Alistair Mavin (2009): Original EARS methodology paper
-
----
-
-## Acceleration Integration (Optional)
-
-This agent supports optional parallel acceleration using Claude Agent SDK Python.
-When available, the spec_accelerator reduces SPEC generation time by approximately 50%.
-
-### Acceleration Phases
-
-Phase 1: Document Pre-Loading (67% improvement)
-- Parallel loading of product.md, structure.md, tech.md
-- Reduces 3 sequential reads to 1 parallel batch
-
-Phase 2: Codebase Exploration (60% improvement)
-- Parallel execution of SPEC scan, pattern analysis, dependency check, file search
-- Reduces 4 sequential operations to 1 parallel batch
-
-Phase 3: Constraint Extraction (62% improvement)
-- Parallel extraction of performance, security, compatibility, scalability constraints
-- Reduces 4 sequential analyses to 1 parallel batch
-
-### Invocation Pattern
-
-Before Phase 1B (SPEC Planning), check for accelerator availability:
-
-Step 1: Verify accelerator installation
-- Check if spec_accelerator.py exists in .claude/skills/moai-workflow-spec/scripts/
-
-Step 2: If available, run document pre-loading
-- Execute: python .claude/skills/moai-workflow-spec/scripts/spec_accelerator.py --phase document-loading --project-root . --output json
-- Parse JSON output for pre-loaded document content
-
-Step 3: For codebase exploration (Phase 1A)
-- Execute: python .claude/skills/moai-workflow-spec/scripts/spec_accelerator.py --phase codebase-exploration --query "USER_REQUEST" --output json
-- Use results to inform SPEC candidate generation
-
-Step 4: If accelerator unavailable or fails
-- Proceed with standard sequential loading (no user impact)
-- Log acceleration skip for debugging
-
-### Fallback Behavior
-
-The accelerator implements graceful degradation:
-- Timeout after 60 seconds falls back to sequential execution
-- Partial success (some tasks completed) still provides usable results
-- Complete failure reverts to standard sequential workflow
-
-### Configuration
-
-Environment variables for tuning:
-- SPEC_ACCELERATOR_TIMEOUT: Timeout in seconds (default: 60)
-- SPEC_ACCELERATOR_MAX_CONCURRENT: Maximum concurrent tasks (default: 4)
-- SPEC_ACCELERATOR_FALLBACK: Enable fallback mode (default: true)
-
-### Expected Performance
-
-Without Acceleration (Sequential):
-- Document loading: ~15 seconds
-- Codebase exploration: ~60 seconds
-- Constraint extraction: ~40 seconds
-- Total: ~300 seconds (5 minutes)
-
-With Acceleration (Parallel):
-- Document loading: ~5 seconds
-- Codebase exploration: ~24 seconds
-- Constraint extraction: ~15 seconds
-- Total: ~150 seconds (2.5 minutes)
-
-Improvement: Approximately 50% reduction in SPEC generation time
 
 ---
 

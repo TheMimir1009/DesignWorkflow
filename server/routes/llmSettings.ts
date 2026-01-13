@@ -199,9 +199,12 @@ llmSettingsRouter.post(
       }
 
       // Create provider instance and test connection
-      const llmProvider = createLLMProvider(providerSettings);
+      // Use shared logger for debug API (SPEC-LLM-002)
+      const llmProvider = createLLMProvider(providerSettings, true);
+      console.log('[DEBUG] Testing connection for provider:', provider, 'projectId:', projectId);
       // Pass projectId for connection test logging (SPEC-LLM-002)
       const result = await llmProvider.testConnection(projectId);
+      console.log('[DEBUG] Connection test result:', result);
 
       // Update connection status based on result
       await updateProviderSettings(projectId, provider as LLMProvider, {
