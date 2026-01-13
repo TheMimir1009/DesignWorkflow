@@ -2,7 +2,7 @@
  * TaskStageModelSelector Component
  * Allows selecting LLM model configuration for each task stage
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type {
   TaskStageConfig,
   LLMModelConfig,
@@ -70,11 +70,15 @@ function StageConfigEditor({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelLoadError, setModelLoadError] = useState<string | null>(null);
 
+  // SPEC-LLM-004: Track previous provider to detect provider changes
+  const prevProviderRef = useRef<LLMProvider | null>(null);
+
   useEffect(() => {
     setLocalConfig(config);
   }, [config]);
 
   // TASK-002: Add useEffect to fetch models for LM Studio
+  // SPEC-LLM-004: Add auto-select logic after models are loaded
   useEffect(() => {
     const fetchModelsForProvider = async (provider: LLMProvider, pid: string) => {
       if (provider !== 'lmstudio') return;
@@ -83,6 +87,20 @@ function StageConfigEditor({
       try {
         const models = await getProviderModels(pid, provider);
         setDynamicModels(prev => ({ ...prev, [provider]: models }));
+
+        // SPEC-LLM-004: Auto-select first model if no modelId exists
+        // Use the latest localConfig from state to check for modelId
+        setLocalConfig(currentConfig => {
+          if (models.length > 0 && !currentConfig?.modelId) {
+            const newConfig = {
+              ...currentConfig!,
+              modelId: models[0],
+            };
+            onUpdate(newConfig);
+            return newConfig;
+          }
+          return currentConfig;
+        });
       } catch (error) {
         setModelLoadError(error instanceof Error ? error.message : '모델 목록을 가져오지 못했습니다');
         setDynamicModels(prev => ({ ...prev, [provider]: [] }));
@@ -91,16 +109,25 @@ function StageConfigEditor({
       }
     };
 
-    if (localConfig?.provider && projectId) {
-      fetchModelsForProvider(localConfig.provider, projectId);
-    }
-  }, [localConfig?.provider, projectId]);
+    const currentProvider = localConfig?.provider || null;
+    const providerChanged = prevProviderRef.current !== currentProvider;
 
+    if (currentProvider && projectId && providerChanged) {
+      prevProviderRef.current = currentProvider;
+      fetchModelsForProvider(currentProvider, projectId);
+    }
+  }, [localConfig?.provider, projectId, onUpdate]);
+
+  // SPEC-LLM-004: Preserve existing modelId when switching to lmstudio provider
   const handleProviderChange = (provider: LLMProvider) => {
     const models = AVAILABLE_MODELS[provider] || [];
     const newConfig: LLMModelConfig = {
       provider,
-      modelId: models[0] || '',
+      // SPEC-LLM-004: For LM Studio, preserve existing modelId to avoid race condition
+      // The useEffect will fetch models and auto-select if needed
+      modelId: (provider === 'lmstudio')
+        ? (localConfig?.modelId || '')
+        : (models[0] || ''),
       ...DEFAULT_MODEL_PARAMS,
     };
     setLocalConfig(newConfig);
