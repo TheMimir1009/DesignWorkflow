@@ -1,13 +1,18 @@
 /**
  * Tasks API Routes
  * Handles all task-related endpoints
+<<<<<<< HEAD
+=======
  *
  * SPEC-DEBUG-004: Added LLM provider selection support
  * SPEC-DEBUG-005: Standardized error handling and response formats
+>>>>>>> main
  */
 import { Router, type Request, type Response } from 'express';
 import type { TaskStatus } from '../../src/types/index.ts';
 import { sendSuccess, sendError } from '../utils/response.ts';
+<<<<<<< HEAD
+=======
 import {
   sendApiSuccess,
   sendApiError,
@@ -21,6 +26,7 @@ import {
   buildLLMConfigMissingError,
   buildLLMGenerationFailedError,
 } from '../utils/errorBuilder.ts';
+>>>>>>> main
 import { getProjectById } from '../utils/projectStorage.ts';
 import {
   getTasksByProject,
@@ -29,6 +35,10 @@ import {
   createTask,
   deleteTask,
   isValidStatus,
+<<<<<<< HEAD
+  generateMockAIContent,
+} from '../utils/taskStorage.ts';
+=======
   addGenerationHistoryEntry,
 } from '../utils/taskStorage.ts';
 import { buildPRDPrompt, buildPrototypePrompt } from '../utils/promptBuilder.ts';
@@ -42,10 +52,13 @@ import {
   type TaskStage,
   type LLMProvider,
 } from '../../src/types/llm.ts';
+>>>>>>> main
 
 export const tasksRouter = Router();
 
 /**
+<<<<<<< HEAD
+=======
  * LLM Provider Selection Result
  * SPEC-DEBUG-004: Added to support project-specific LLM provider selection
  */
@@ -146,6 +159,7 @@ function mapStatusToStage(status: TaskStatus): TaskStage {
 }
 
 /**
+>>>>>>> main
  * GET /api/projects/:projectId/tasks - Get all tasks for a project
  *
  * Path Parameters:
@@ -177,7 +191,10 @@ export async function getProjectTasks(req: Request, res: Response): Promise<void
 
 /**
  * PUT /api/tasks/:id/status - Update task status
+<<<<<<< HEAD
+=======
  * SPEC-DEBUG-005: Standardized error handling
+>>>>>>> main
  *
  * Path Parameters:
  * - id: Task UUID
@@ -198,26 +215,48 @@ tasksRouter.put('/:id/status', async (req: Request, res: Response): Promise<void
 
     // Validate status is provided
     if (!status) {
+<<<<<<< HEAD
+      sendError(res, 400, 'Status is required');
+=======
       sendApiErrorFromBuilder(res, buildMissingRequiredFieldError('status'), 400);
+>>>>>>> main
       return;
     }
 
     // Validate status value
     if (!isValidStatus(status)) {
+<<<<<<< HEAD
+      sendError(res, 400, 'Invalid status. Must be one of: featurelist, design, prd, prototype');
+=======
       sendApiErrorFromBuilder(res, buildInvalidStatusError(status), 400);
+>>>>>>> main
       return;
     }
 
     // Check if task exists
     const taskResult = await getTaskById(id);
     if (!taskResult) {
+<<<<<<< HEAD
+      sendError(res, 404, 'Task not found');
+=======
       sendApiErrorFromBuilder(res, buildTaskNotFoundError(id), 404);
+>>>>>>> main
       return;
     }
 
     // Update task
     const updatedTask = await updateTask(id, { status: status as TaskStatus });
     if (!updatedTask) {
+<<<<<<< HEAD
+      sendError(res, 500, 'Failed to update task');
+      return;
+    }
+
+    sendSuccess(res, updatedTask);
+  } catch (error) {
+    console.error('Error updating task status:', error);
+    sendError(res, 500, 'Failed to update task status');
+=======
       sendApiError(res, 500, 'Failed to update task');
       return;
     }
@@ -226,12 +265,16 @@ tasksRouter.put('/:id/status', async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error('Error updating task status:', error);
     sendApiError(res, 500, 'Failed to update task status');
+>>>>>>> main
   }
 });
 
 /**
  * POST /api/tasks/:id/trigger-ai - Trigger AI generation for a task
+<<<<<<< HEAD
+=======
  * SPEC-DEBUG-005: REQ-ERR-006, REQ-ERR-011, REQ-ERR-012 - Standardized error handling
+>>>>>>> main
  *
  * Path Parameters:
  * - id: Task UUID
@@ -241,7 +284,11 @@ tasksRouter.put('/:id/status', async (req: Request, res: Response): Promise<void
  *
  * Response: ApiResponse<Task>
  * - 200: AI generation successful, task updated
+<<<<<<< HEAD
+ * - 400: Invalid target status or missing target status
+=======
  * - 400: Invalid target status, missing target status, LLM config error, or prerequisite missing
+>>>>>>> main
  * - 404: Task not found
  * - 500: Server error
  */
@@ -252,19 +299,35 @@ tasksRouter.post('/:id/trigger-ai', async (req: Request, res: Response): Promise
 
     // Validate targetStatus is provided
     if (!targetStatus) {
+<<<<<<< HEAD
+      sendError(res, 400, 'Target status is required');
+=======
       sendApiErrorFromBuilder(res, buildMissingRequiredFieldError('targetStatus'), 400);
+>>>>>>> main
       return;
     }
 
     // Validate targetStatus value
     if (!isValidStatus(targetStatus)) {
+<<<<<<< HEAD
+      sendError(res, 400, 'Invalid target status. Must be one of: featurelist, design, prd, prototype');
+=======
       sendApiErrorFromBuilder(res, buildInvalidStatusError(targetStatus), 400);
+>>>>>>> main
       return;
     }
 
     // Check if task exists
     const taskResult = await getTaskById(id);
     if (!taskResult) {
+<<<<<<< HEAD
+      sendError(res, 404, 'Task not found');
+      return;
+    }
+
+    // Generate AI content (mock implementation)
+    const aiGeneratedContent = generateMockAIContent(taskResult.task, targetStatus as TaskStatus);
+=======
       sendApiErrorFromBuilder(res, buildTaskNotFoundError(id), 404);
       return;
     }
@@ -484,10 +547,21 @@ ${prompt}
       // Design document is generated via Q&A flow, not here
       aiGeneratedContent = { status: targetStatus as TaskStatus };
     }
+>>>>>>> main
 
     // Update task with AI generated content
     const updatedTask = await updateTask(id, aiGeneratedContent);
     if (!updatedTask) {
+<<<<<<< HEAD
+      sendError(res, 500, 'Failed to update task with AI content');
+      return;
+    }
+
+    sendSuccess(res, updatedTask);
+  } catch (error) {
+    console.error('Error triggering AI generation:', error);
+    sendError(res, 500, 'Failed to trigger AI generation');
+=======
       sendApiError(res, 500, 'Failed to update task with AI content');
       return;
     }
@@ -496,6 +570,7 @@ ${prompt}
   } catch (error) {
     console.error('Error triggering AI generation:', error);
     sendApiError(res, 500, 'Failed to trigger AI generation');
+>>>>>>> main
   }
 });
 
@@ -546,7 +621,10 @@ tasksRouter.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
 /**
  * DELETE /api/tasks/:id - Delete a task
+<<<<<<< HEAD
+=======
  * SPEC-DEBUG-005: Standardized error handling
+>>>>>>> main
  *
  * Path Parameters:
  * - id: Task UUID
@@ -562,6 +640,16 @@ tasksRouter.delete('/:id', async (req: Request, res: Response): Promise<void> =>
 
     const deleted = await deleteTask(id);
     if (!deleted) {
+<<<<<<< HEAD
+      sendError(res, 404, 'Task not found');
+      return;
+    }
+
+    sendSuccess(res, { deleted: true });
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    sendError(res, 500, 'Failed to delete task');
+=======
       sendApiErrorFromBuilder(res, buildTaskNotFoundError(id), 404);
       return;
     }
@@ -570,6 +658,7 @@ tasksRouter.delete('/:id', async (req: Request, res: Response): Promise<void> =>
   } catch (error) {
     console.error('Error deleting task:', error);
     sendApiError(res, 500, 'Failed to delete task');
+>>>>>>> main
   }
 });
 

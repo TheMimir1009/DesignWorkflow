@@ -2,6 +2,14 @@
  * Tasks API Tests
  * TDD test suite for task-related endpoints
  */
+<<<<<<< HEAD
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import request from 'supertest';
+import fs from 'fs/promises';
+import path from 'path';
+import { createApp } from '../server/index.ts';
+import type { Task, Project, ApiResponse, CreateTaskDto, UpdateTaskDto } from '../src/types/index.ts';
+=======
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import fs from 'fs/promises';
@@ -9,11 +17,16 @@ import path from 'path';
 import express from 'express';
 import type { Task, Project, ApiResponse, CreateTaskDto, UpdateTaskDto } from '../src/types/index.ts';
 import type { LLMModelConfig } from '../src/types/llm.ts';
+>>>>>>> main
 import { v4 as uuidv4 } from 'uuid';
 
 // Test workspace path - must match server's WORKSPACE_PATH
 const WORKSPACE_PATH = path.join(process.cwd(), 'workspace/projects');
 
+<<<<<<< HEAD
+describe('Tasks API', () => {
+  let app: ReturnType<typeof createApp>;
+=======
 // Mock all LLM-related modules BEFORE importing routes
 vi.mock('../server/utils/llmSettingsStorage.ts', () => ({
   getLLMSettingsOrDefault: vi.fn().mockResolvedValue({
@@ -128,6 +141,7 @@ async function createTestApp() {
 
 describe('Tasks API', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>;
+>>>>>>> main
   let testProjectId: string;
 
   // Helper to create a test project
@@ -168,8 +182,11 @@ describe('Tasks API', () => {
 
   // Helper to create a test task
   async function createTestTask(projectId: string, overrides: Partial<Task> = {}): Promise<Task> {
+<<<<<<< HEAD
+=======
     // Use past timestamp to ensure updatedAt comparison works reliably
     const pastDate = new Date(Date.now() - 1000).toISOString();
+>>>>>>> main
     const task: Task = {
       id: uuidv4(),
       projectId,
@@ -183,8 +200,13 @@ describe('Tasks API', () => {
       qaAnswers: [],
       revisions: [],
       isArchived: false,
+<<<<<<< HEAD
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+=======
       createdAt: pastDate,
       updatedAt: pastDate,
+>>>>>>> main
       ...overrides,
     };
 
@@ -197,7 +219,11 @@ describe('Tasks API', () => {
   }
 
   beforeAll(async () => {
+<<<<<<< HEAD
+    app = createApp();
+=======
     app = await createTestApp();
+>>>>>>> main
     await fs.mkdir(WORKSPACE_PATH, { recursive: true });
   });
 
@@ -337,6 +363,13 @@ describe('Tasks API', () => {
 
       expect(body.success).toBe(true);
       expect(body.data!.status).toBe('design');
+<<<<<<< HEAD
+      // For mock AI, design document should be populated
+      expect(body.data!.designDocument).not.toBeNull();
+    });
+
+    it('should generate PRD when moving to prd status', async () => {
+=======
       // Design status just updates status - no AI generation for design status
     });
 
@@ -344,6 +377,7 @@ describe('Tasks API', () => {
       // TODO: Fix LLM provider mocking for this test
       // The test requires complex mocking of getModelConfigForStage and createLLMProvider
       // which is challenging due to module import order
+>>>>>>> main
       const task = await createTestTask(testProjectId, {
         status: 'design',
         designDocument: 'Some design document',
@@ -361,10 +395,14 @@ describe('Tasks API', () => {
       expect(body.data!.prd).not.toBeNull();
     });
 
+<<<<<<< HEAD
+    it('should generate prototype when moving to prototype status', async () => {
+=======
     it.skip('should generate prototype when moving to prototype status', async () => {
       // TODO: Fix LLM provider mocking for this test
       // The test requires complex mocking of getModelConfigForStage and createLLMProvider
       // which is challenging due to module import order
+>>>>>>> main
       const task = await createTestTask(testProjectId, {
         status: 'prd',
         prd: 'Some PRD content',
@@ -405,7 +443,11 @@ describe('Tasks API', () => {
       const body = response.body as ApiResponse<null>;
 
       expect(body.success).toBe(false);
+<<<<<<< HEAD
+      expect(body.error).toContain('Invalid target status');
+=======
       expect(body.error).toContain('Invalid status');
+>>>>>>> main
     });
 
     it('should return 400 when targetStatus is missing', async () => {
@@ -419,7 +461,11 @@ describe('Tasks API', () => {
       const body = response.body as ApiResponse<null>;
 
       expect(body.success).toBe(false);
+<<<<<<< HEAD
+      expect(body.error).toContain('Target status is required');
+=======
       expect(body.error).toContain('TargetStatus is required');
+>>>>>>> main
     });
   });
 
@@ -521,6 +567,12 @@ describe('Tasks API', () => {
     it('should update task title successfully', async () => {
       const task = await createTestTask(testProjectId, { title: 'Original Title' });
 
+<<<<<<< HEAD
+      // Small delay to ensure updatedAt timestamp differs
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+=======
+>>>>>>> main
       const updateData: UpdateTaskDto = {
         title: 'Updated Title',
       };

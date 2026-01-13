@@ -54,18 +54,31 @@ AI Workflow Kanban 시스템에서 기획 파이프라인을 시각적으로 관
 ### 2.1 기술 스택
 
 **프론트엔드**:
+<<<<<<< HEAD
+- React 19
+- TypeScript 5.9
+=======
 - React 18.x
 - TypeScript 5.x
+>>>>>>> main
 - @dnd-kit/core ^6.0.0
 - @dnd-kit/sortable ^7.0.0
 - @dnd-kit/utilities (드래그 스타일링)
 - Zustand (상태 관리)
+<<<<<<< HEAD
+- Tailwind CSS 4
+=======
 - Tailwind CSS 3.x
+>>>>>>> main
 
 **백엔드**:
 - Node.js 20.x LTS
 - Express 4.x
+<<<<<<< HEAD
+- TypeScript 5.9
+=======
 - TypeScript 5.x
+>>>>>>> main
 
 ### 2.2 기존 타입 정의
 
@@ -412,7 +425,10 @@ export const KANBAN_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
 - SPEC-PROJECT-001: 프로젝트 관리 (의존성, 완료)
 - SPEC-TASK-001: 태스크 관리 (후속, 계획)
 - SPEC-DOCUMENT-001: 문서 편집 (후속, 계획)
+<<<<<<< HEAD
+=======
 - SPEC-DEBUG-004: LLM Provider Configuration Integration (AI 생성 경로 연동)
+>>>>>>> main
 
 ---
 
@@ -421,4 +437,9 @@ export const KANBAN_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
 | 1.0 | 2026-01-03 | 초안 작성 |
+<<<<<<< HEAD
+| 1.1 | 2026-01-03 | TDD 구현 완료, 테스트 통과, 상태 Completed로 변경 |
+| 1.2 | 2026-01-04 | 기술 스택 버전 업데이트 (React 19, TypeScript 5.9, Tailwind CSS 4, Vite 7) |
+=======
 | 1.1 | 2026-01-03 | TDD 구현 완료, 273개 테스트 통과, 상태 Completed로 변경 |
+>>>>>>> main

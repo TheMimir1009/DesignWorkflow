@@ -19,12 +19,18 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { useTaskStore } from '../../store/taskStore';
+<<<<<<< HEAD
+import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
+import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
+import type { Task, TaskStatus } from '../../types';
+=======
 import { useArchiveStore } from '../../store/archiveStore';
 import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
 import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
 import { QAFormModal, DocumentViewerModal } from '../document';
 import type { Task, TaskStatus } from '../../types';
 import type { QACategory } from '../../types/qa';
+>>>>>>> main
 
 /**
  * Props for KanbanBoard component
@@ -77,6 +83,8 @@ function ErrorDisplay({ message }: { message: string }) {
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
+<<<<<<< HEAD
+=======
   // Q&A Modal state
   const [isQAModalOpen, setIsQAModalOpen] = useState(false);
   const [qaTaskId, setQATaskId] = useState<string | null>(null);
@@ -86,6 +94,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
+>>>>>>> main
   // Store selectors
   const tasks = useTaskStore((state) => state.tasks);
   const generatingTasks = useTaskStore((state) => state.generatingTasks);
@@ -95,15 +104,21 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const updateTaskStatus = useTaskStore((state) => state.updateTaskStatus);
   const triggerAIGeneration = useTaskStore((state) => state.triggerAIGeneration);
 
+<<<<<<< HEAD
+=======
   // Archive store
   const archiveTask = useArchiveStore((state) => state.archiveTask);
 
+>>>>>>> main
   // Modal state selectors
   const isCreateModalOpen = useTaskStore((state) => state.isCreateModalOpen);
   const isEditModalOpen = useTaskStore((state) => state.isEditModalOpen);
   const isDeleteConfirmOpen = useTaskStore((state) => state.isDeleteConfirmOpen);
   const selectedTask = useTaskStore((state) => state.selectedTask);
+<<<<<<< HEAD
+=======
   const openCreateModal = useTaskStore((state) => state.openCreateModal);
+>>>>>>> main
   const closeCreateModal = useTaskStore((state) => state.closeCreateModal);
   const closeEditModal = useTaskStore((state) => state.closeEditModal);
   const closeDeleteConfirm = useTaskStore((state) => state.closeDeleteConfirm);
@@ -152,6 +167,8 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     [tasks]
   );
 
+<<<<<<< HEAD
+=======
   // Open Q&A modal for a task moving to design
   const openQAModal = useCallback((taskId: string, category: QACategory = 'game_mechanic') => {
     setQATaskId(taskId);
@@ -194,6 +211,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     closeQAModal();
   }, [fetchTasks, projectId, closeQAModal]);
 
+>>>>>>> main
   // Handle drag end
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -207,6 +225,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       if (!task) return;
 
       // Determine target status from drop zone
+<<<<<<< HEAD
+      const targetStatus = over.id as TaskStatus;
+=======
       // Check if over.id is a valid column status, otherwise get it from sortable data
       const validStatuses: TaskStatus[] = ['featurelist', 'design', 'prd', 'prototype'];
       let targetStatus: TaskStatus;
@@ -230,10 +251,13 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           }
         }
       }
+>>>>>>> main
 
       // Skip if same status
       if (task.status === targetStatus) return;
 
+<<<<<<< HEAD
+=======
       // Check if it's a forward movement from featurelist to design
       // This triggers the Q&A flow instead of direct AI generation
       if (task.status === 'featurelist' && targetStatus === 'design') {
@@ -241,6 +265,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         return;
       }
 
+>>>>>>> main
       // Check if it's a forward movement (triggers AI)
       const isForward = isForwardMovement(task.status, targetStatus);
 
@@ -252,7 +277,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         await updateTaskStatus(taskId, targetStatus);
       }
     },
+<<<<<<< HEAD
+    [tasks, updateTaskStatus, triggerAIGeneration]
+=======
     [tasks, updateTaskStatus, triggerAIGeneration, openQAModal]
+>>>>>>> main
   );
 
   // Handle delete confirmation
@@ -274,6 +303,8 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
 
   return (
     <div data-testid="kanban-board" className="p-4">
+<<<<<<< HEAD
+=======
       {/* Header with New Task Button */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold text-gray-100">Kanban Board</h1>
@@ -288,6 +319,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         </button>
       </div>
 
+>>>>>>> main
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -301,9 +333,12 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
               column={column}
               tasks={getTasksByStatus(column.id)}
               generatingTasks={generatingTasks}
+<<<<<<< HEAD
+=======
               projectId={projectId}
               onViewDocuments={openDocViewer}
               onArchive={handleArchive}
+>>>>>>> main
             />
           ))}
         </div>
@@ -340,6 +375,8 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           onConfirm={handleDeleteConfirm}
         />
       )}
+<<<<<<< HEAD
+=======
 
       {/* Q&A Form Modal */}
       {qaTaskId && (
@@ -360,6 +397,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           task={viewingTask}
         />
       )}
+>>>>>>> main
     </div>
   );
 }

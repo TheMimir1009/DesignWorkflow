@@ -1,12 +1,20 @@
 /**
  * Template Type Definitions Tests
  * TDD test suite for template-related type definitions
+<<<<<<< HEAD
+=======
  * SPEC-TEMPLATE-001: Template System Types
+>>>>>>> main
  */
 import { describe, it, expect } from 'vitest';
 import type {
   Template,
   TemplateVariable,
+<<<<<<< HEAD
+  TemplateCategory,
+  CreateTemplateDto,
+  UpdateTemplateDto,
+=======
   TemplateVariableType,
   TemplateCategory,
   TemplateState,
@@ -15,6 +23,7 @@ import type {
   TemplateApplicationContext,
   ApplyTemplateRequest,
   ApplyTemplateResponse,
+>>>>>>> main
 } from '../../src/types/index.ts';
 
 describe('Template Type Definitions', () => {
@@ -30,6 +39,8 @@ describe('Template Type Definitions', () => {
     });
   });
 
+<<<<<<< HEAD
+=======
   describe('TemplateVariableType', () => {
     it('should accept valid variable type values', () => {
       const textType: TemplateVariableType = 'text';
@@ -44,6 +55,7 @@ describe('Template Type Definitions', () => {
     });
   });
 
+>>>>>>> main
   describe('TemplateVariable', () => {
     it('should define required variable properties', () => {
       const variable: TemplateVariable = {
@@ -232,6 +244,8 @@ describe('Template Type Definitions', () => {
       expect(dto.variables).toEqual([]);
     });
   });
+<<<<<<< HEAD
+=======
 
   describe('TemplateState', () => {
     it('should define store state structure', () => {
@@ -349,4 +363,5 @@ describe('Template Type Definitions', () => {
       expect(response.appliedVariables).toHaveProperty('title');
     });
   });
+>>>>>>> main
 });

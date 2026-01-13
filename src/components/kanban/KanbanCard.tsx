@@ -16,10 +16,13 @@ export interface KanbanCardProps {
   isDragging?: boolean;
   /** Whether AI is currently generating content for this task */
   isGenerating?: boolean;
+<<<<<<< HEAD
+=======
   /** Callback when archive button is clicked (only for prototype tasks) */
   onArchive?: (taskId: string) => void;
   /** Callback when card is clicked to view documents */
   onViewDocuments?: (task: Task) => void;
+>>>>>>> main
 }
 
 /**
@@ -125,6 +128,11 @@ function GeneratingIndicator() {
 }
 
 /**
+<<<<<<< HEAD
+ * KanbanCard - Draggable task card for Kanban board
+ */
+export function KanbanCard({ task, isDragging = false, isGenerating = false }: KanbanCardProps) {
+=======
  * Archive button component for prototype tasks
  */
 function ArchiveButton({ onClick }: { onClick: () => void }) {
@@ -163,6 +171,7 @@ export function KanbanCard({
   onArchive,
   onViewDocuments,
 }: KanbanCardProps) {
+>>>>>>> main
   const {
     attributes,
     listeners,
@@ -183,6 +192,8 @@ export function KanbanCard({
   const visibleReferences = task.references.slice(0, MAX_VISIBLE_REFERENCES);
   const remainingCount = task.references.length - MAX_VISIBLE_REFERENCES;
 
+<<<<<<< HEAD
+=======
   // Handle card click to view documents
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't trigger if dragging or clicking archive button
@@ -197,19 +208,27 @@ export function KanbanCard({
     }
   };
 
+>>>>>>> main
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+<<<<<<< HEAD
+=======
       onClick={handleCardClick}
+>>>>>>> main
       data-testid={`kanban-card-${task.id}`}
       className={`
         relative p-3 bg-white rounded-lg shadow-sm border border-gray-200
         hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing
         ${isCurrentlyDragging ? 'opacity-50 shadow-lg' : ''}
         ${isGenerating ? 'animate-pulse' : ''}
+<<<<<<< HEAD
+      `}
+    >
+=======
         ${onViewDocuments ? 'hover:border-blue-300' : ''}
       `}
     >
@@ -218,6 +237,7 @@ export function KanbanCard({
         <ArchiveButton onClick={() => onArchive(task.id)} />
       )}
 
+>>>>>>> main
       {/* Generating Indicator */}
       {isGenerating && <GeneratingIndicator />}
 

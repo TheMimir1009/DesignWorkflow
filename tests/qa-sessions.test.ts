@@ -244,6 +244,21 @@ describe('Questions API', () => {
 
   describe('GET /api/questions/:categoryId', () => {
     it('should return questions for a category', async () => {
+<<<<<<< HEAD
+      const response = await request(app).get('/api/questions/game-mechanic');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+    });
+
+    it('should return empty array for non-existent category', async () => {
+      const response = await request(app).get('/api/questions/non-existent-category');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual([]);
+=======
       // Use snake_case category name as expected by the API
       const response = await request(app).get('/api/questions/game_mechanic');
 
@@ -259,6 +274,7 @@ describe('Questions API', () => {
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('Invalid category');
+>>>>>>> main
     });
   });
 });

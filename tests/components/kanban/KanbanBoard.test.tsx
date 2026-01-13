@@ -188,6 +188,8 @@ describe('KanbanBoard', () => {
       expect(screen.getByTestId('drag-overlay')).toBeInTheDocument();
     });
   });
+<<<<<<< HEAD
+=======
 
   describe('Q&A Modal Integration', () => {
     it('should have QAFormModal in DOM', () => {
@@ -198,4 +200,5 @@ describe('KanbanBoard', () => {
       expect(screen.getByTestId('kanban-board')).toBeInTheDocument();
     });
   });
+>>>>>>> main
 });
