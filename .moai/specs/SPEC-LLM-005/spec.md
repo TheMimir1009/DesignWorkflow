@@ -3,11 +3,11 @@ spec_id: SPEC-LLM-005
 title: 칸반 컬럼별 LLM 설정 기능 개선
 category: llm
 priority: medium
-status: planned
+status: completed
 created_at: 2026-01-13
 updated_at: 2026-01-13
 author: alfred
-version: 1.0.0
+version: 1.1.0
 related_specs:
   - SPEC-LLM-001: Multi-LLM Provider Support
   - SPEC-LLM-004: LM Studio Dynamic Model Selection UI
@@ -18,6 +18,7 @@ related_specs:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-01-13 | alfred | 초기 SPEC 작성 |
+| 1.1.0 | 2026-01-13 | alfred | 구현 완료 - ColumnModelDisplay 컴포넌트, ModelBadge, useColumnModelConfig Hook, providerIcons 추가, 19개 테스트 통과 |
 
 ---
 
