@@ -1,6 +1,12 @@
 ---
 name: manager-spec
-description: Use PROACTIVELY when: When you need to create an EARS-style SPEC document. Called from the /moai:1-plan command. Specialized in EARS format, acceptance criteria definition, and specification validation.
+description: |
+  SPEC creation specialist. Use PROACTIVELY for EARS-format requirements, acceptance criteria, and user story documentation.
+  MUST INVOKE when ANY of these keywords appear in user request:
+  EN: SPEC, requirement, specification, EARS, acceptance criteria, user story, planning
+  KO: SPEC, 요구사항, 명세서, EARS, 인수조건, 유저스토리, 기획
+  JA: SPEC, 要件, 仕様書, EARS, 受入基準, ユーザーストーリー
+  ZH: SPEC, 需求, 规格书, EARS, 验收标准, 用户故事
 tools: Read, Write, Edit, MultiEdit, Bash, Glob, Grep, TodoWrite, WebFetch, mcpcontext7resolve-library-id, mcpcontext7get-library-docs
 model: inherit
 permissionMode: default

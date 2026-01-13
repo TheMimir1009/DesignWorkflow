@@ -5,11 +5,31 @@
 import express, { type Express } from 'express';
 import cors from 'cors';
 import { projectsRouter } from './routes/projects.ts';
-import { systemsRouter } from './routes/systems.ts';
 import { tasksRouter, getProjectTasks, createProjectTask } from './routes/tasks.ts';
+import { systemsRouter, getProjectSystems, createProjectSystem } from './routes/systems.ts';
+import { qaRouter, saveTaskQA, getTaskQA, generateDesign } from './routes/qa.ts';
+import { authRouter } from './routes/auth.ts';
+import { usersRouter } from './routes/users.ts';
+import { projectAccessRouter } from './routes/projectAccess.ts';
+import { generateRouter } from './routes/generate.ts';
+import { qaSessionsRouter } from './routes/qa-sessions.ts';
 import { templatesRouter } from './routes/templates.ts';
 import { questionsRouter } from './routes/questions.ts';
-import { qaSessionsRouter } from './routes/qa-sessions.ts';
+import {
+  getProjectArchives,
+  getProjectArchive,
+  archiveTask,
+  restoreArchivedTask,
+  deleteProjectArchive,
+} from './routes/archives.ts';
+import { analyticsRouter } from './routes/analytics.ts';
+import { discoverProjectSystems } from './routes/discovery.ts';
+import { llmSettingsRouter } from './routes/llmSettings.ts';
+import { debugRouter } from './routes/debug.ts';
+import {
+  getProjectCompletedDocuments,
+  getProjectCompletedDocument,
+} from './routes/completedDocuments.ts';
 
 /**
  * Create and configure Express application
@@ -23,20 +43,63 @@ export function createApp(): Express {
   app.use(express.json());
 
   // Routes
+  app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
   app.use('/api/projects', projectsRouter);
-  app.use('/api/projects/:projectId/systems', systemsRouter);
   app.use('/api/tasks', tasksRouter);
 
-  // Project-scoped routes
+  // Project-scoped task routes
   app.get('/api/projects/:projectId/tasks', getProjectTasks);
   app.post('/api/projects/:projectId/tasks', createProjectTask);
+
+  // Archive routes
+  app.get('/api/projects/:projectId/archives', getProjectArchives);
+  app.get('/api/projects/:projectId/archives/:archiveId', getProjectArchive);
+  app.post('/api/projects/:projectId/tasks/:taskId/archive', archiveTask);
+  app.post('/api/projects/:projectId/archives/:archiveId/restore', restoreArchivedTask);
+  app.delete('/api/projects/:projectId/archives/:archiveId', deleteProjectArchive);
+
+  // Project access routes
+  app.use('/api/projects/:projectId/access', projectAccessRouter);
+
+  // System routes
+  app.use('/api/systems', systemsRouter);
+  app.get('/api/projects/:projectId/systems', getProjectSystems);
+  app.post('/api/projects/:projectId/systems', createProjectSystem);
+
+  // Q&A routes
+  app.use('/api/questions', qaRouter);
+  app.post('/api/tasks/:taskId/qa', saveTaskQA);
+  app.get('/api/tasks/:taskId/qa', getTaskQA);
+  app.post('/api/tasks/:taskId/generate-design', generateDesign);
+
+  // AI Generation routes (Claude Code Integration)
+  app.use('/api/generate', generateRouter);
+
+  // QA Sessions routes
+  app.use('/api/qa-sessions', qaSessionsRouter);
 
   // Templates routes
   app.use('/api/templates', templatesRouter);
 
-  // QA routes
-  app.use('/api/questions', questionsRouter);
-  app.use('/api/qa-sessions', qaSessionsRouter);
+  // Question Library routes (separate from Q&A questions)
+  app.use('/api/question-library', questionsRouter);
+
+  // Analytics routes
+  app.use('/api/projects/:projectId/analytics', analyticsRouter);
+
+  // Discovery routes (Auto-exploration)
+  app.post('/api/projects/:projectId/discover', discoverProjectSystems);
+
+  // Completed Documents routes (SPEC-DOCREF-001)
+  app.get('/api/projects/:projectId/completed-documents', getProjectCompletedDocuments);
+  app.get('/api/projects/:projectId/completed-documents/:taskId', getProjectCompletedDocument);
+
+  // LLM Settings routes (SPEC-LLM-001)
+  app.use('/api/projects', llmSettingsRouter);
+
+  // Debug routes (SPEC-DEBUG-003)
+  app.use('/api/debug', debugRouter);
 
   return app;
 }

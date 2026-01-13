@@ -5,6 +5,10 @@
 import { useState, useEffect } from 'react';
 import { useTaskStore } from '../../store/taskStore';
 import { MarkdownEditor } from '../common/MarkdownEditor';
+<<<<<<< HEAD
+=======
+import { ModelHistoryList } from './ModelHistoryList';
+>>>>>>> main
 import type { Task, TaskStatus } from '../../types';
 
 interface TaskEditModalProps {
@@ -155,6 +159,15 @@ export function TaskEditModal({ isOpen, onClose, task }: TaskEditModalProps) {
               <p>Created: {formatDate(task.createdAt)}</p>
               <p>Last Updated: {formatDate(task.updatedAt)}</p>
             </div>
+<<<<<<< HEAD
+=======
+
+            {/* AI Generation History (SPEC-MODELHISTORY-001) */}
+            <ModelHistoryList
+              history={task.generationHistory ?? []}
+              className="mt-4"
+            />
+>>>>>>> main
           </div>
 
           <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">

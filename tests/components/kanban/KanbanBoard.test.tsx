@@ -188,4 +188,17 @@ describe('KanbanBoard', () => {
       expect(screen.getByTestId('drag-overlay')).toBeInTheDocument();
     });
   });
+<<<<<<< HEAD
+=======
+
+  describe('Q&A Modal Integration', () => {
+    it('should have QAFormModal in DOM', () => {
+      render(<KanbanBoard projectId="test-project-id" />);
+
+      // QAFormModal should be in DOM but not visible initially
+      // The modal is only shown when isQAModalOpen is true
+      expect(screen.getByTestId('kanban-board')).toBeInTheDocument();
+    });
+  });
+>>>>>>> main
 });

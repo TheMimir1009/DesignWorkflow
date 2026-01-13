@@ -133,6 +133,15 @@ workspace/
 !.moai/specs/
 !.moai/specs/**
 
+# Ignore backup directories created by sync
+.moai-backups/
+
+# Ignore generated prototypes and temporary documentation
+prototype-*.html
+GDD-*.md
+PRD-*.md
+FEATURES.md
+
 .moai/cache/
 .moai/logs/
 .moai/docs/
@@ -151,3 +160,76 @@ workspace/
 .claude/settings.local.*.json
 .claude/.env.local*
 .claude/local/
+.env.glm
+*-secret.*
+# Legacy config format (migrated to YAML in v0.32.0)
+*-api-key.*
+.moai/scripts/*sync*.sh
+.moai/scripts/phase*.sh
+*_secret=*
+# Deployment & CI/CD
+api-key-*
+*.secret.*
+# Backups
+.claude/skills/*/secrets/
+.turbo/
+# Cloud provider credentials
+# FIXED: Issue #237 - Replaced overly broad *key* and *secret* patterns
+# Version: 0.33.0
+# Private keys (specific patterns to avoid false positives)
+# Updated: 2026-01-10
+*-secret-key.*
+.nuxt/
+# Include tracked directories
+.claude/skills/*/*/*secret*
+.github/workflows/*.yml.bak
+# Environment files
+!.moai/project/
+.claude/skills/*/.env*
+!.moai/project/**
+.moai/scripts/phase*.py
+secret-*.*
+.moai/scripts/__pycache__/
+.gitlab-ci.yml.bak
+*_key.*
+.netlify/
+# MoAI-ADK Package Distribution .gitignore
+.aws/config
+# Claude Code Configuration
+# Skill-specific credentials
+.claude/skills/*/*/*key*
+!.moai/announcements/**
+.firebase/
+# Credential patterns in environment files
+# .moai/ Directory Management
+*_secret.*
+private-key*
+# Linux
+# Exclude local-only directories
+.vercel/
+# Purpose: Essential patterns for user projects
+.moai/scripts/sync-*.sh
+# ===========================================
+# Secrets and Credentials (CRITICAL)
+.moai/config/config.json
+.moai/scripts/sync-*.py
+# Build Tools & Frameworks
+# Exclude local development scripts
+# Build Artifacts & Distribution
+# Mac
+*.backup/
+*.key.*
+*_token=*
+*-backup/
+# Node.js (for docs/Nextra)
+# Python Cache & Bytecode
+*_backup_*/
+.moai/archived-skills/
+secret-key-*
+.aws/credentials
+# Windows
+.claude/skills/*/*/*token*
+!.moai/announcements/
+*-key.*
+# Certificate files
+# Exclude all .moai/* by default

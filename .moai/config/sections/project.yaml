@@ -1,19 +1,15 @@
-# Project Settings
-# Basic project metadata
-
 project:
-  name: "design-workflow"                                         # Project name
-  description: "AI Workflow Kanban - Game planning pipeline automation system"  # Project description
-  type: "web_browser_app"                                         # Project type: web_browser_app, mobile_app, cli_tool, backend_api
-  locale: ko_KR                                                   # Auto-derived from conversation_language
-  created_at: "2026-01-02T00:00:00Z"                              # Auto-set during init
-  initialized: true                                               # Auto-set during init
+  name: DesignWorkflow
+  description: AI Workflow Kanban - Game planning pipeline automation system
+  type: web_browser_app
+  locale: ko_KR
+  created_at: '2026-01-12T21:32:17.447112Z'
+  initialized: 'true'
   tech_stack:
-    frontend: "React 18, Vite, Tailwind CSS 3, @dnd-kit/core"
-    backend: "Node.js 20 LTS, Express"
-    state: "Zustand"
-    ai_engine: "Claude Code Headless Mode"
-  prd_file: "ai-workflow-kanban-prd_4.md"                         # Reference PRD document
-
+    frontend: React 18, Vite, Tailwind CSS 3, @dnd-kit/core
+    backend: Node.js 20 LTS, Express
+    state: Zustand
+    ai_engine: Claude Code Headless Mode
+  prd_file: ai-workflow-kanban-prd_4.md
 github:
-  profile_name: ""            # GitHub username (e.g., @GoosLab)
+  profile_name: themimir1009

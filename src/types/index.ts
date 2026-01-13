@@ -47,6 +47,8 @@ export interface Task {
   references: string[];
   qaAnswers: QAAnswer[];
   revisions: Revision[];
+  /** AI model usage history for document generations (SPEC-MODELHISTORY-001) */
+  generationHistory?: GenerationHistoryEntry[];
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -122,6 +124,15 @@ export interface Archive {
   projectId: string;
   task: Task;
   archivedAt: string;
+}
+
+// Archive Store State
+export interface ArchiveState {
+  archives: Archive[];
+  selectedArchiveId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  searchQuery: string;
 }
 
 // Question template for Q&A system
@@ -248,38 +259,41 @@ export interface TaskModalState {
   selectedTask: Task | null;
 }
 
-// Template system types
-// Template category for categorizing templates
+// =============================================================================
+// Template System Types (SPEC-TEMPLATE-001)
+// =============================================================================
+
+// Template categories for organizing templates
 export type TemplateCategory = 'qa-questions' | 'document-structure' | 'prompts';
 
-// Variable type for template variables
+// Template variable input types
 export type TemplateVariableType = 'text' | 'textarea' | 'select' | 'number';
 
-// Template variable definition
+// Template variable definition for dynamic content
 export interface TemplateVariable {
   name: string;
   description: string;
   defaultValue: string | null;
   required: boolean;
   type: TemplateVariableType;
-  options: string[] | null;
+  options: string[] | null; // For select type
 }
 
-// Template represents a reusable document template
+// Main Template interface
 export interface Template {
   id: string;
   name: string;
   category: TemplateCategory;
   description: string;
-  content: string;
+  content: string; // JSON string for Q&A, Markdown for documents
   variables: TemplateVariable[];
   isDefault: boolean;
-  projectId: string | null;
+  projectId: string | null; // null = global template
   createdAt: string;
   updatedAt: string;
 }
 
-// Template state for Zustand store
+// Template Store State
 export interface TemplateState {
   templates: Template[];
   selectedTemplateId: string | null;
@@ -288,13 +302,15 @@ export interface TemplateState {
   error: string | null;
 }
 
-// Template DTOs for API operations
+// DTOs for API operations
 export interface CreateTemplateDto {
   name: string;
   category: TemplateCategory;
   description?: string;
   content?: string;
   variables?: TemplateVariable[];
+  isDefault?: boolean;
+  projectId?: string | null;
 }
 
 export interface UpdateTemplateDto {
@@ -303,15 +319,254 @@ export interface UpdateTemplateDto {
   description?: string;
   content?: string;
   variables?: TemplateVariable[];
+  isDefault?: boolean;
 }
 
-// Template apply request
+// Template application context for applying templates
+export interface TemplateApplicationContext {
+  templateId: string;
+  variableValues: Record<string, string>;
+  targetType: 'qa-form' | 'document' | 'prompt';
+}
+
+// Request/Response types for template application API
 export interface ApplyTemplateRequest {
   variableValues: Record<string, string>;
 }
 
-// Template apply response
 export interface ApplyTemplateResponse {
   content: string;
-  appliedAt: string;
+  appliedVariables: Record<string, string>;
 }
+
+// =============================================================================
+// Authentication Types (SPEC-AUTH-001)
+// =============================================================================
+
+/**
+ * User role in the system
+ */
+export type UserRole = 'admin' | 'user';
+
+/**
+ * Project access role
+ */
+export type ProjectRole = 'owner' | 'editor' | 'viewer';
+
+/**
+ * User without sensitive data
+ */
+export interface SafeUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Authentication state
+ */
+export interface AuthState {
+  user: SafeUser | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+/**
+ * Registration DTO
+ */
+export interface RegisterDto {
+  email: string;
+  password: string;
+  name: string;
+}
+
+/**
+ * Login DTO
+ */
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+/**
+ * Login response
+ */
+export interface LoginResponse {
+  user: SafeUser;
+  token: string;
+}
+
+/**
+ * Project access entry
+ */
+export interface ProjectAccess {
+  userId: string;
+  projectId: string;
+  role: ProjectRole;
+  grantedBy: string;
+  grantedAt: string;
+}
+
+// =============================================================================
+// Dashboard Types (SPEC-DASHBOARD-001)
+// =============================================================================
+
+/**
+ * Task counts by status for dashboard
+ */
+export interface TasksByStatus {
+  featurelist: number;
+  design: number;
+  prd: number;
+  prototype: number;
+}
+
+/**
+ * Dashboard summary data
+ */
+export interface DashboardSummary {
+  projectId: string;
+  totalTasks: number;
+  tasksByStatus: TasksByStatus;
+  completionRate: number;
+  archivedCount: number;
+  documentsGenerated: number;
+  lastUpdated: string;
+}
+
+/**
+ * Timeline data point for charts
+ */
+export interface TimelineDataPoint {
+  date: string;
+  tasksCreated: number;
+  tasksCompleted: number;
+  documentsGenerated: number;
+}
+
+/**
+ * Period filter for timeline
+ */
+export type PeriodFilter = 'daily' | 'weekly' | 'monthly';
+
+/**
+ * Dashboard state for Zustand store
+ */
+export interface DashboardState {
+  summary: DashboardSummary | null;
+  timeline: TimelineDataPoint[];
+  periodFilter: PeriodFilter;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// =============================================================================
+// Completed Document Types (SPEC-DOCREF-001)
+// =============================================================================
+
+/**
+ * Summary view of a completed document (prototype or archived task)
+ * Used in list endpoint responses
+ */
+export interface CompletedDocumentSummary {
+  taskId: string;
+  title: string;
+  status: 'prototype' | 'archived';
+  references: string[];
+  hasDesignDoc: boolean;
+  hasPrd: boolean;
+  hasPrototype: boolean;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+}
+
+/**
+ * Full detail view of a completed document
+ * Used in single document endpoint response
+ */
+export interface CompletedDocumentDetail {
+  taskId: string;
+  title: string;
+  status: 'prototype' | 'archived';
+  references: string[];
+  featureList: string;
+  designDocument: string | null;
+  prd: string | null;
+  prototype: string | null;
+  qaAnswers: QAAnswer[];
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+}
+
+/**
+ * Query options for filtering completed documents
+ */
+export interface CompletedDocumentsQueryOptions {
+  search?: string;
+  documentType?: string[];
+  reference?: string[];
+  includeArchived?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+// =============================================================================
+// LLM Provider Types (SPEC-LLM-001)
+// =============================================================================
+
+export * from './llm';
+
+// =============================================================================
+// Generation History Types (SPEC-MODELHISTORY-001)
+// =============================================================================
+
+import type { LLMProvider } from './llm';
+
+/**
+ * Document type for generation history
+ */
+export type GenerationDocumentType = 'design' | 'prd' | 'prototype';
+
+/**
+ * Action type for generation history
+ */
+export type GenerationAction = 'create' | 'modify';
+
+/**
+ * Entry in the generation history tracking AI model usage
+ */
+export interface GenerationHistoryEntry {
+  /** Unique identifier for this entry */
+  id: string;
+  /** Type of document generated */
+  documentType: GenerationDocumentType;
+  /** Whether this was a creation or modification */
+  action: GenerationAction;
+  /** LLM provider used */
+  provider: LLMProvider;
+  /** Model identifier (e.g., 'gpt-4o', 'claude-3.5-sonnet') */
+  model: string;
+  /** ISO 8601 timestamp when generation occurred */
+  createdAt: string;
+  /** Token usage information (if available) */
+  tokens?: {
+    input: number;
+    output: number;
+  };
+  /** User feedback for modification requests */
+  feedback?: string;
+}
+
+// =============================================================================
+// Debug Console Types (SPEC-DEBUG-001)
+// =============================================================================
+
+export * from './debug';
+

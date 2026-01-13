@@ -1,9 +1,16 @@
 ---
 id: SPEC-TEMPLATE-001
+<<<<<<< HEAD
 version: "1.0.0"
 status: "draft"
 created: "2026-01-04"
 updated: "2026-01-04"
+=======
+version: "1.2.0"
+status: "completed"
+created: "2026-01-04"
+updated: "2026-01-07"
+>>>>>>> main
 author: "manager-spec"
 priority: "medium"
 ---
@@ -15,6 +22,11 @@ priority: "medium"
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-01-04 | manager-spec | Initial SPEC creation |
+<<<<<<< HEAD
+=======
+| 1.1.0 | 2026-01-07 | manager-tdd | Template type definitions implemented |
+| 1.2.0 | 2026-01-07 | manager-docs | Documentation synchronized, status completed |
+>>>>>>> main
 
 ---
 
@@ -23,10 +35,17 @@ priority: "medium"
 ```yaml
 spec_id: SPEC-TEMPLATE-001
 title: Template System - Document Template Management
+<<<<<<< HEAD
 status: draft
 priority: medium
 created: 2026-01-04
 updated: 2026-01-04
+=======
+status: completed
+priority: medium
+created: 2026-01-04
+updated: 2026-01-07
+>>>>>>> main
 lifecycle: spec-anchored
 dependencies:
   - SPEC-PROJECT-001 (Project Management - completed)
@@ -386,4 +405,9 @@ workspace/templates/
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-01-04 | workflow-spec | Initial SPEC creation |
+<<<<<<< HEAD
 | 1.1.0 | 2026-01-04 | manager-docs | Tech stack version update (React 19, TypeScript 5.9, Tailwind CSS 4) |
+=======
+| 1.1.0 | 2026-01-07 | manager-tdd | Template type definitions implemented |
+| 1.2.0 | 2026-01-07 | manager-docs | Documentation synchronized |
+>>>>>>> main
