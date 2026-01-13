@@ -412,6 +412,7 @@ export const KANBAN_COLUMNS: Array<{ id: TaskStatus; title: string }> = [
 - SPEC-PROJECT-001: 프로젝트 관리 (의존성, 완료)
 - SPEC-TASK-001: 태스크 관리 (후속, 계획)
 - SPEC-DOCUMENT-001: 문서 편집 (후속, 계획)
+- SPEC-DEBUG-004: LLM Provider Configuration Integration (AI 생성 경로 연동)
 
 ---
 

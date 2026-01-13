@@ -1,9 +1,21 @@
 /**
  * Q&A API Routes
  * Handles all Q&A-related endpoints for the form-based Q&A system
+ * SPEC-DEBUG-005: Standardized error handling and response formats
  */
 import { Router, type Request, type Response } from 'express';
 import { sendSuccess, sendError } from '../utils/response.ts';
+import {
+  sendApiSuccess,
+  sendApiSuccessWithNull,
+  sendApiError,
+  sendApiErrorFromBuilder,
+} from '../utils/apiResponse.ts';
+import {
+  buildTaskNotFoundError,
+  buildMissingRequiredFieldError,
+  buildInvalidCategoryError,
+} from '../utils/errorBuilder.ts';
 import {
   loadQuestionTemplate,
   getAvailableCategories,
@@ -14,6 +26,8 @@ import {
   createQASession,
 } from '../utils/qaStorage.ts';
 import { getTaskById, updateTask } from '../utils/taskStorage.ts';
+import { callClaudeCode, ClaudeCodeTimeoutError } from '../utils/claudeCodeRunner.ts';
+import { buildDesignDocumentPrompt, type QAResponse } from '../utils/promptBuilder.ts';
 import type { QACategory, QASessionAnswer } from '../../src/types/qa.ts';
 
 export const qaRouter = Router();
@@ -38,6 +52,24 @@ function isValidCategory(category: string): category is QACategory {
  * - 500: Server error
  */
 qaRouter.get('/', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const categories = getAvailableCategories();
+    sendSuccess(res, categories);
+  } catch (error) {
+    console.error('Error getting categories:', error);
+    sendError(res, 500, 'Failed to get categories');
+  }
+});
+
+/**
+ * GET /api/questions/categories - Get all available categories
+ * (Alias for backward compatibility)
+ *
+ * Response: ApiResponse<CategoryDefinition[]>
+ * - 200: List of available categories
+ * - 500: Server error
+ */
+qaRouter.get('/categories', async (_req: Request, res: Response): Promise<void> => {
   try {
     const categories = getAvailableCategories();
     sendSuccess(res, categories);
@@ -77,6 +109,7 @@ qaRouter.get('/:category', async (req: Request, res: Response): Promise<void> =>
 
 /**
  * POST /api/tasks/:taskId/qa - Save Q&A answers for a task
+ * SPEC-DEBUG-005: REQ-ERR-005 - Auto-creates session if not exists
  *
  * Path Parameters:
  * - taskId: Task UUID
@@ -89,7 +122,7 @@ qaRouter.get('/:category', async (req: Request, res: Response): Promise<void> =>
  *
  * Response: ApiResponse<{ sessionId: string; session: QASession }>
  * - 200: Q&A answers saved successfully
- * - 400: Missing required fields
+ * - 400: Missing required fields or invalid category
  * - 404: Task not found
  * - 500: Server error
  */
@@ -100,22 +133,23 @@ export async function saveTaskQA(req: Request, res: Response): Promise<void> {
 
     // Validate required fields
     if (!category) {
-      sendError(res, 400, 'Category is required');
+      sendApiErrorFromBuilder(res, buildMissingRequiredFieldError('category'), 400);
       return;
     }
 
     if (!isValidCategory(category)) {
-      sendError(res, 400, `Invalid category: ${category}`);
+      sendApiErrorFromBuilder(res, buildInvalidCategoryError(category), 400);
       return;
     }
 
     // Check if task exists
     const taskResult = await getTaskById(taskId);
     if (!taskResult) {
-      sendError(res, 404, 'Task not found');
+      sendApiErrorFromBuilder(res, buildTaskNotFoundError(taskId), 404);
       return;
     }
 
+    // SPEC-DEBUG-005: REQ-ERR-005 - Auto-create session if not exists
     // Get or create Q&A session
     let session = await getQASessionByTaskId(taskId);
 
@@ -149,25 +183,26 @@ export async function saveTaskQA(req: Request, res: Response): Promise<void> {
 
     await updateTask(taskId, { qaAnswers });
 
-    sendSuccess(res, {
+    sendApiSuccess(res, {
       sessionId: savedSession.id,
       session: savedSession,
     });
   } catch (error) {
     console.error('Error saving Q&A answers:', error);
-    sendError(res, 500, 'Failed to save Q&A answers');
+    sendApiError(res, 500, 'Failed to save Q&A answers');
   }
 }
 
 /**
  * GET /api/tasks/:taskId/qa - Get Q&A session for a task
+ * SPEC-DEBUG-005: REQ-ERR-004 - Returns 200 with null when session not found
  *
  * Path Parameters:
  * - taskId: Task UUID
  *
- * Response: ApiResponse<QASession>
- * - 200: Q&A session retrieved
- * - 404: Task or session not found
+ * Response: ApiResponse<QASession | null>
+ * - 200: Q&A session retrieved (or null if not exists)
+ * - 404: Task not found
  * - 500: Server error
  */
 export async function getTaskQA(req: Request, res: Response): Promise<void> {
@@ -177,21 +212,22 @@ export async function getTaskQA(req: Request, res: Response): Promise<void> {
     // Check if task exists
     const taskResult = await getTaskById(taskId);
     if (!taskResult) {
-      sendError(res, 404, 'Task not found');
+      sendApiErrorFromBuilder(res, buildTaskNotFoundError(taskId), 404);
       return;
     }
 
     // Get Q&A session
     const session = await getQASessionByTaskId(taskId);
     if (!session) {
-      sendError(res, 404, 'Q&A session not found for this task');
+      // SPEC-DEBUG-005: REQ-ERR-004 - Return 200 OK with null for optional resources
+      sendApiSuccessWithNull(res);
       return;
     }
 
-    sendSuccess(res, session);
+    sendApiSuccess(res, session);
   } catch (error) {
     console.error('Error getting Q&A session:', error);
-    sendError(res, 500, 'Failed to get Q&A session');
+    sendApiError(res, 500, 'Failed to get Q&A session');
   }
 }
 
@@ -222,12 +258,53 @@ export async function generateDesign(req: Request, res: Response): Promise<void>
     // Get Q&A session for context
     const session = await getQASessionByTaskId(taskId);
 
-    // Generate mock design document based on Q&A answers
-    const qaContext = session?.answers
-      .map((a) => `Q: ${a.questionId}\nA: ${a.answer}`)
-      .join('\n\n') || 'No Q&A context available';
+    // Convert session answers to QAResponse format for prompt builder
+    const qaResponses: QAResponse[] = session?.answers.map((a) => ({
+      question: a.questionId,
+      answer: a.answer,
+    })) || [];
 
-    const designDocument = generateMockDesignDocument(task.title, task.featureList, qaContext);
+    // Build the AI prompt with task context
+    const basePrompt = buildDesignDocumentPrompt(qaResponses);
+    const fullPrompt = `
+## Task Information
+- Title: ${task.title}
+- Feature List: ${task.featureList || 'Not specified'}
+
+${basePrompt}
+
+## Additional Instructions
+- Write the design document in Korean (한국어)
+- Focus on practical implementation details
+- Include specific technical recommendations based on the Q&A responses
+`;
+
+    // Generate design document using Claude Code AI
+    console.log(`[AI Generation] Starting Design Document generation for task: ${taskId}`);
+
+    const result = await callClaudeCode(
+      fullPrompt,
+      process.cwd(),
+      { timeout: 600000, allowedTools: ['Read', 'Grep'] }  // 10분 타임아웃
+    );
+
+    // Extract the generated content
+    let designDocument: string;
+    if (result.output && typeof result.output === 'object' && 'result' in result.output) {
+      designDocument = (result.output as { result: string }).result;
+    } else if (result.rawOutput) {
+      // Try to parse JSON and extract result
+      try {
+        const parsed = JSON.parse(result.rawOutput);
+        designDocument = parsed.result || result.rawOutput;
+      } catch {
+        designDocument = result.rawOutput;
+      }
+    } else {
+      throw new Error('No content generated from Claude Code');
+    }
+
+    console.log(`[AI Generation] Design Document generated successfully for task: ${taskId}`);
 
     // Update task with design document and status
     const updatedTask = await updateTask(taskId, {
@@ -243,47 +320,19 @@ export async function generateDesign(req: Request, res: Response): Promise<void>
     }
 
     sendSuccess(res, {
-      message: 'Design document generated successfully',
+      message: 'Design document generated successfully with AI',
       task: updatedTask,
     });
   } catch (error) {
     console.error('Error generating design:', error);
-    sendError(res, 500, 'Failed to generate design document');
+
+    // Provide more specific error messages
+    if (error instanceof ClaudeCodeTimeoutError) {
+      sendError(res, 504, 'AI generation timed out. Please try again.');
+    } else {
+      sendError(res, 500, `Failed to generate design document: ${(error as Error).message}`);
+    }
   }
 }
 
-/**
- * Generate mock design document (placeholder for AI integration)
- */
-function generateMockDesignDocument(
-  title: string,
-  featureList: string,
-  qaContext: string
-): string {
-  return `# Design Document: ${title}
-
-## Overview
-This design document outlines the implementation plan for the feature based on the collected requirements.
-
-## Feature Description
-${featureList}
-
-## Design Intent (from Q&A)
-${qaContext}
-
-## Technical Approach
-- Architecture: Component-based design
-- Data Flow: Unidirectional state management
-- Integration Points: API endpoints and state stores
-
-## Implementation Notes
-- Follow existing project patterns
-- Maintain type safety
-- Include comprehensive tests
-
----
-*This is an auto-generated design document. Review and refine as needed.*
-
-Generated at: ${new Date().toISOString()}
-`;
-}
+// Mock function removed - now using Claude Code AI for design document generation

@@ -4,7 +4,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 
 ## Project Progress
 
-**Current Progress: 100%**
+**Current Progress: 100%** (19 features completed)
 
 ### Completed Features
 
@@ -17,6 +17,40 @@ Game design pipeline visualization and AI-powered document generation workflow s
 - Q&A System (SPEC-QA-001)
 - Multi-User Authentication (SPEC-AUTH-001)
 - Document Editing Pipeline (SPEC-DOCUMENT-001)
+- Archive Feature (SPEC-ARCHIVE-001)
+- Claude Code Integration (SPEC-CLAUDE-001)
+- Dashboard and Analytics (SPEC-DASHBOARD-001)
+- Relevant Systems Auto-Discovery (SPEC-AUTODISCOVERY-001)
+- Completed Task Document API (SPEC-DOCREF-001)
+- Document Reference Panel UI (SPEC-DOCREF-002)
+- AI Model History Recording (SPEC-MODELHISTORY-001)
+- Circular Dependency Fix (SPEC-DOCEDIT-002)
+- Agent Refactoring for Claude Code Integration (SPEC-AGENT-001)
+- **LLM Logger API Integration (SPEC-DEBUG-003)**
+  - Server-side LLM call logging infrastructure
+  - Token usage tracking for all providers (OpenAI, Gemini, LMStudio, ClaudeCode)
+  - Cost estimation by model pricing
+  - 53 tests passing with 95.55% coverage
+  - Core logging modules: llmLogger.ts, tokenExtractor.ts, modelPricing.ts
+- **LM Studio Dynamic Model Selection UI (SPEC-LLM-004)**
+  - LM Studio 프로바이더 선택 시 동적 모델 목록 표시
+  - 로딩 상태 및 에러 처리 UI 개선
+  - TaskStageModelSelector 및 ColumnLLMSettingsModal 수정
+  - 23/23 테스트 통과
+  - 관련 SPEC: SPEC-LLM-002, SPEC-LLM-003
+
+### In Progress Features
+
+- Document Editing Enhancement (SPEC-DOCEDIT-001)
+  - Backend Implementation: 100% Complete (39 tests passed)
+  - Frontend Implementation: Pending
+  - Features: Version management, diff generation, auto-save API
+
+- LLM Debug Console (SPEC-DEBUG-001)
+  - Keyboard shortcut (Ctrl+D/Cmd+D) to open debug console
+  - Real-time LLM API call monitoring
+  - Server-side logging complete (SPEC-DEBUG-003)
+  - Client-side integration pending
 
 ## Project Context
 
@@ -61,8 +95,8 @@ src/
   types/         - TypeScript interfaces
   store/         - Zustand store definitions
 server/
-  routes/        - Express API routes
-  utils/         - Server utilities
+  routes/        - Express API routes (including documentVersions.ts)
+  utils/         - Server utilities (including versionStorage.ts, diffGenerator.ts)
 workspace/
   projects/      - Per-project data storage
   templates/

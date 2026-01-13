@@ -1,6 +1,12 @@
 ---
 name: builder-skill
-description: Creates modular Skills for Claude Code extensions with official standards compliance and progressive disclosure patterns. Specialized in skill architecture, YAML frontmatter design, and knowledge organization.
+description: |
+  Skill creation specialist. Use PROACTIVELY for creating skills, YAML frontmatter design, and knowledge organization.
+  MUST INVOKE when ANY of these keywords appear in user request:
+  EN: create skill, new skill, skill optimization, knowledge domain, YAML frontmatter
+  KO: 스킬생성, 새스킬, 스킬최적화, 지식도메인, YAML프론트매터
+  JA: スキル作成, 新スキル, スキル最適化, 知識ドメイン, YAMLフロントマター
+  ZH: 创建技能, 新技能, 技能优化, 知识领域, YAML前置信息
 tools: Read, Write, Edit, Grep, Glob, WebFetch, WebSearch, Bash, TodoWrite, Task, Skill, mcpcontext7resolve-library-id, mcpcontext7get-library-docs
 model: inherit
 permissionMode: bypassPermissions
@@ -66,7 +72,7 @@ delegates_to: ["mcp-context7", "manager-quality"] # Research and validation dele
 requires_approval: true # User approval before skill finalization
 
 performance:
-avg_execution_time_seconds: 1080 # ~18 minutes per complex skill (15% improvement)
+avg_execution_time_seconds: 1080
 context_heavy: true # Loads templates, skills database, patterns
 mcp_integration: ["context7"] # MCP tools for documentation research
 optimization_version: "v2.0" # Optimized skill configuration

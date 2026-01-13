@@ -5,6 +5,7 @@
 import { useState, useEffect, useId } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { LLMSettingsTab } from '../llm/LLMSettingsTab';
 
 export interface ProjectSettingsModalProps {
   isOpen: boolean;
@@ -12,7 +13,7 @@ export interface ProjectSettingsModalProps {
   projectId: string;
 }
 
-type TabId = 'basic' | 'techstack' | 'categories' | 'danger';
+type TabId = 'basic' | 'techstack' | 'categories' | 'llm' | 'danger';
 
 const SUGGESTED_TECH_STACKS = ['Unity', 'Unreal', 'Node.js', 'AWS', 'React', 'TypeScript'];
 const SUGGESTED_CATEGORIES = ['System', 'Content', 'UI', 'Economy', 'Growth', 'Narrative'];
@@ -121,6 +122,7 @@ export function ProjectSettingsModal({ isOpen, onClose, projectId }: ProjectSett
     { id: 'basic', label: '기본 정보' },
     { id: 'techstack', label: '기술 스택' },
     { id: 'categories', label: '카테고리' },
+    { id: 'llm', label: 'LLM 설정' },
     { id: 'danger', label: '위험 영역' },
   ];
 
@@ -288,6 +290,10 @@ export function ProjectSettingsModal({ isOpen, onClose, projectId }: ProjectSett
                   </div>
                 </div>
               </div>
+            )}
+
+            {activeTab === 'llm' && (
+              <LLMSettingsTab projectId={projectId} />
             )}
 
             {activeTab === 'danger' && (

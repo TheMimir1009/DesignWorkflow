@@ -47,6 +47,8 @@ export interface Task {
   references: string[];
   qaAnswers: QAAnswer[];
   revisions: Revision[];
+  /** AI model usage history for document generations (SPEC-MODELHISTORY-001) */
+  generationHistory?: GenerationHistoryEntry[];
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -122,6 +124,15 @@ export interface Archive {
   projectId: string;
   task: Task;
   archivedAt: string;
+}
+
+// Archive Store State
+export interface ArchiveState {
+  archives: Archive[];
+  selectedArchiveId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  searchQuery: string;
 }
 
 // Question template for Q&A system
@@ -400,3 +411,162 @@ export interface ProjectAccess {
   grantedBy: string;
   grantedAt: string;
 }
+
+// =============================================================================
+// Dashboard Types (SPEC-DASHBOARD-001)
+// =============================================================================
+
+/**
+ * Task counts by status for dashboard
+ */
+export interface TasksByStatus {
+  featurelist: number;
+  design: number;
+  prd: number;
+  prototype: number;
+}
+
+/**
+ * Dashboard summary data
+ */
+export interface DashboardSummary {
+  projectId: string;
+  totalTasks: number;
+  tasksByStatus: TasksByStatus;
+  completionRate: number;
+  archivedCount: number;
+  documentsGenerated: number;
+  lastUpdated: string;
+}
+
+/**
+ * Timeline data point for charts
+ */
+export interface TimelineDataPoint {
+  date: string;
+  tasksCreated: number;
+  tasksCompleted: number;
+  documentsGenerated: number;
+}
+
+/**
+ * Period filter for timeline
+ */
+export type PeriodFilter = 'daily' | 'weekly' | 'monthly';
+
+/**
+ * Dashboard state for Zustand store
+ */
+export interface DashboardState {
+  summary: DashboardSummary | null;
+  timeline: TimelineDataPoint[];
+  periodFilter: PeriodFilter;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// =============================================================================
+// Completed Document Types (SPEC-DOCREF-001)
+// =============================================================================
+
+/**
+ * Summary view of a completed document (prototype or archived task)
+ * Used in list endpoint responses
+ */
+export interface CompletedDocumentSummary {
+  taskId: string;
+  title: string;
+  status: 'prototype' | 'archived';
+  references: string[];
+  hasDesignDoc: boolean;
+  hasPrd: boolean;
+  hasPrototype: boolean;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+}
+
+/**
+ * Full detail view of a completed document
+ * Used in single document endpoint response
+ */
+export interface CompletedDocumentDetail {
+  taskId: string;
+  title: string;
+  status: 'prototype' | 'archived';
+  references: string[];
+  featureList: string;
+  designDocument: string | null;
+  prd: string | null;
+  prototype: string | null;
+  qaAnswers: QAAnswer[];
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+}
+
+/**
+ * Query options for filtering completed documents
+ */
+export interface CompletedDocumentsQueryOptions {
+  search?: string;
+  documentType?: string[];
+  reference?: string[];
+  includeArchived?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+// =============================================================================
+// LLM Provider Types (SPEC-LLM-001)
+// =============================================================================
+
+export * from './llm';
+
+// =============================================================================
+// Generation History Types (SPEC-MODELHISTORY-001)
+// =============================================================================
+
+import type { LLMProvider } from './llm';
+
+/**
+ * Document type for generation history
+ */
+export type GenerationDocumentType = 'design' | 'prd' | 'prototype';
+
+/**
+ * Action type for generation history
+ */
+export type GenerationAction = 'create' | 'modify';
+
+/**
+ * Entry in the generation history tracking AI model usage
+ */
+export interface GenerationHistoryEntry {
+  /** Unique identifier for this entry */
+  id: string;
+  /** Type of document generated */
+  documentType: GenerationDocumentType;
+  /** Whether this was a creation or modification */
+  action: GenerationAction;
+  /** LLM provider used */
+  provider: LLMProvider;
+  /** Model identifier (e.g., 'gpt-4o', 'claude-3.5-sonnet') */
+  model: string;
+  /** ISO 8601 timestamp when generation occurred */
+  createdAt: string;
+  /** Token usage information (if available) */
+  tokens?: {
+    input: number;
+    output: number;
+  };
+  /** User feedback for modification requests */
+  feedback?: string;
+}
+
+// =============================================================================
+// Debug Console Types (SPEC-DEBUG-001)
+// =============================================================================
+
+export * from './debug';
+

@@ -1,19 +1,25 @@
 ---
-name: moai-workflow-spec
-description: SPEC workflow orchestration with EARS format, requirement clarification, and Plan-Run-Sync integration for MoAI-ADK development methodology
-version: 1.1.0
-category: workflow
-tags:
-  - workflow
-  - spec
-  - ears
-  - requirements
-  - moai-adk
-  - planning
-updated: 2025-12-30
-status: active
-author: MoAI-ADK Team
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+name: "moai-workflow-spec"
+description: "SPEC workflow orchestration with EARS format, requirement clarification, and Plan-Run-Sync integration for MoAI-ADK development methodology"
+version: 1.2.0
+category: "workflow"
+modularized: true
+user-invocable: false
+context: fork
+agent: Plan
+tags: ['workflow', 'spec', 'ears', 'requirements', 'moai-adk', 'planning']
+updated: 2026-01-08
+status: "active"
+author: "MoAI-ADK Team"
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+  - mcp__context7__resolve-library-id
+  - mcp__context7__get-library-docs
 ---
 
 # SPEC Workflow Management
@@ -293,7 +299,7 @@ Validation Checklist:
 - moai-foundation-core: SPEC-First TDD methodology and TRUST 5 framework
 - moai-workflow-testing: TDD implementation and test automation
 - moai-workflow-project: Project initialization and configuration
-- moai-workflow-worktree: Git Worktree management for parallel development
+- moai-worktree: Git Worktree management for parallel development
 - manager-spec: SPEC creation and requirement analysis agent
 - manager-tdd: TDD implementation based on SPEC requirements
 - manager-quality: TRUST 5 quality validation and gate enforcement

@@ -13,12 +13,27 @@ import {
   reviewCode as apiReviewCode,
   optimizeCode as apiOptimizeCode,
   analyzeCode as apiAnalyzeCode,
+  generateDesignDocument as apiGenerateDesignDocument,
+  generatePRD as apiGeneratePRD,
+  generatePrototype as apiGeneratePrototype,
+  analyzeFeatures as apiAnalyzeFeatures,
+  modifyDocument as apiModifyDocument,
+  getGenerationStatus as apiGetGenerationStatus,
+  getGenerationHistory as apiGetGenerationHistory,
   type GenerateCodeRequest,
   type GenerateComponentRequest,
   type ReviewCodeRequest,
   type OptimizeCodeRequest,
   type AnalyzeCodeRequest,
+  type GenerateDesignDocumentRequest,
+  type GeneratePRDRequest,
+  type GeneratePrototypeRequest,
+  type AnalyzeFeaturesRequest,
+  type ModifyDocumentRequest,
   type AIGenerationResponse,
+  type GenerationStatusResponse,
+  type GenerationHistoryResponse,
+  type PaginationOptions,
 } from '../services/claudeCodeService.ts';
 
 /**
@@ -47,6 +62,32 @@ export interface UseAIGenerationReturn extends AIGenerationState {
   optimizeCode: (request: OptimizeCodeRequest) => Promise<void>;
   /** Analyze code structure */
   analyzeCode: (request: AnalyzeCodeRequest) => Promise<void>;
+  /** Generate design document from Q&A responses */
+  generateDesignDocument: (
+    request: GenerateDesignDocumentRequest,
+    projectId?: string,
+    taskId?: string
+  ) => Promise<void>;
+  /** Generate PRD from design document */
+  generatePRD: (
+    request: GeneratePRDRequest,
+    projectId?: string,
+    taskId?: string
+  ) => Promise<void>;
+  /** Generate prototype HTML from PRD */
+  generatePrototype: (
+    request: GeneratePrototypeRequest,
+    projectId?: string,
+    taskId?: string
+  ) => Promise<void>;
+  /** Analyze features and extract keywords */
+  analyzeFeatures: (request: AnalyzeFeaturesRequest) => Promise<void>;
+  /** Modify existing document */
+  modifyDocument: (request: ModifyDocumentRequest) => Promise<void>;
+  /** Get generation service status */
+  getGenerationStatus: () => Promise<GenerationStatusResponse>;
+  /** Get generation history for a project */
+  getGenerationHistory: (projectId: string, options?: PaginationOptions) => Promise<GenerationHistoryResponse>;
   /** Reset state to initial values */
   reset: () => void;
   /** Clear error while keeping result */
@@ -163,6 +204,103 @@ export function useAIGeneration(): UseAIGenerationReturn {
     setError(null);
   }, []);
 
+  /**
+   * Generate design document from Q&A responses
+   */
+  const generateDesignDocument = useCallback(
+    async (
+      request: GenerateDesignDocumentRequest,
+      projectId?: string,
+      taskId?: string
+    ): Promise<void> => {
+      const enhancedRequest = {
+        ...request,
+        ...(projectId !== undefined && { projectId }),
+        ...(taskId !== undefined && { taskId }),
+      };
+      await executeWithLoading(() => apiGenerateDesignDocument(enhancedRequest));
+    },
+    [executeWithLoading]
+  );
+
+  /**
+   * Generate PRD from design document
+   */
+  const generatePRD = useCallback(
+    async (
+      request: GeneratePRDRequest,
+      projectId?: string,
+      taskId?: string
+    ): Promise<void> => {
+      const enhancedRequest = {
+        ...request,
+        ...(projectId !== undefined && { projectId }),
+        ...(taskId !== undefined && { taskId }),
+      };
+      await executeWithLoading(() => apiGeneratePRD(enhancedRequest));
+    },
+    [executeWithLoading]
+  );
+
+  /**
+   * Generate prototype HTML from PRD
+   */
+  const generatePrototype = useCallback(
+    async (
+      request: GeneratePrototypeRequest,
+      projectId?: string,
+      taskId?: string
+    ): Promise<void> => {
+      const enhancedRequest = {
+        ...request,
+        ...(projectId !== undefined && { projectId }),
+        ...(taskId !== undefined && { taskId }),
+      };
+      await executeWithLoading(() => apiGeneratePrototype(enhancedRequest));
+    },
+    [executeWithLoading]
+  );
+
+  /**
+   * Analyze features and extract keywords
+   */
+  const analyzeFeatures = useCallback(
+    async (request: AnalyzeFeaturesRequest): Promise<void> => {
+      await executeWithLoading(() => apiAnalyzeFeatures(request));
+    },
+    [executeWithLoading]
+  );
+
+  /**
+   * Modify existing document
+   */
+  const modifyDocument = useCallback(
+    async (request: ModifyDocumentRequest): Promise<void> => {
+      await executeWithLoading(() => apiModifyDocument(request));
+    },
+    [executeWithLoading]
+  );
+
+  /**
+   * Get generation service status (without affecting loading state)
+   */
+  const getGenerationStatus = useCallback(
+    async (): Promise<GenerationStatusResponse> => {
+      return apiGetGenerationStatus();
+    },
+    []
+  );
+
+  /**
+   * Get generation history for a project (without affecting loading state)
+   */
+  const getGenerationHistory = useCallback(
+    async (projectId: string, options?: PaginationOptions): Promise<GenerationHistoryResponse> => {
+      return apiGetGenerationHistory(projectId, options);
+    },
+    []
+  );
+
   return {
     isLoading,
     error,
@@ -172,6 +310,13 @@ export function useAIGeneration(): UseAIGenerationReturn {
     reviewCode,
     optimizeCode,
     analyzeCode,
+    generateDesignDocument,
+    generatePRD,
+    generatePrototype,
+    analyzeFeatures,
+    modifyDocument,
+    getGenerationStatus,
+    getGenerationHistory,
     reset,
     clearError,
   };

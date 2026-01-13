@@ -104,7 +104,10 @@ export function createClaudeCodeRunner(spawnFn: SpawnFunction = spawn) {
         allowedTools.join(','),
       ];
 
-      const process = spawnFn('claude', args, { cwd: workingDir });
+      const process = spawnFn('claude', args, {
+        cwd: workingDir,
+        stdio: ['ignore', 'pipe', 'pipe']  // stdin: ignore, stdout: pipe, stderr: pipe
+      });
 
       let stdout = '';
       let stderr = '';

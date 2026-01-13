@@ -128,3 +128,161 @@ export async function listQASessions(): Promise<QASession[]> {
     return [];
   }
 }
+
+// ============================================================================
+// Project QA Session Functions
+// Used by qa-sessions.ts routes for project/task-scoped Q&A progress tracking
+// ============================================================================
+
+/**
+ * Project QA Session interface for tracking Q&A progress per task
+ */
+export interface ProjectQASession {
+  id: string;
+  taskId: string;
+  projectId: string;
+  answers: Record<string, string>;
+  isComplete: boolean;
+  progress: number;
+  completedCategories: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get file path for a project QA session by its ID
+ */
+function getProjectSessionFilePath(sessionId: string): string {
+  return path.join(QA_SESSIONS_DIR, `${sessionId}.json`);
+}
+
+/**
+ * Create a new project QA session
+ */
+export async function createSession(
+  taskId: string,
+  projectId: string
+): Promise<ProjectQASession> {
+  await ensureDirectory();
+
+  const now = new Date().toISOString();
+  const session: ProjectQASession = {
+    id: uuidv4(),
+    taskId,
+    projectId,
+    answers: {},
+    isComplete: false,
+    progress: 0,
+    completedCategories: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const filePath = getProjectSessionFilePath(session.id);
+  await fs.writeFile(filePath, JSON.stringify(session, null, 2), 'utf-8');
+
+  return session;
+}
+
+/**
+ * Get a project QA session by ID
+ */
+export async function getSessionById(sessionId: string): Promise<ProjectQASession | null> {
+  const filePath = getProjectSessionFilePath(sessionId);
+
+  try {
+    const content = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(content) as ProjectQASession;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Update a project QA session
+ */
+export async function updateSession(
+  sessionId: string,
+  updates: Partial<Pick<ProjectQASession, 'answers' | 'completedCategories' | 'progress'>>
+): Promise<ProjectQASession | null> {
+  const session = await getSessionById(sessionId);
+
+  if (!session) {
+    return null;
+  }
+
+  const updatedSession: ProjectQASession = {
+    ...session,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Recalculate progress if answers were updated
+  if (updates.answers) {
+    const answerCount = Object.keys(updatedSession.answers).length;
+    // Simple progress calculation - can be enhanced based on total questions
+    updatedSession.progress = Math.min(answerCount * 10, 100);
+  }
+
+  const filePath = getProjectSessionFilePath(sessionId);
+  await fs.writeFile(filePath, JSON.stringify(updatedSession, null, 2), 'utf-8');
+
+  return updatedSession;
+}
+
+/**
+ * Mark a project QA session as complete
+ */
+export async function completeSession(sessionId: string): Promise<ProjectQASession | null> {
+  const session = await getSessionById(sessionId);
+
+  if (!session) {
+    return null;
+  }
+
+  const completedSession: ProjectQASession = {
+    ...session,
+    isComplete: true,
+    progress: 100,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const filePath = getProjectSessionFilePath(sessionId);
+  await fs.writeFile(filePath, JSON.stringify(completedSession, null, 2), 'utf-8');
+
+  return completedSession;
+}
+
+/**
+ * Get all project QA sessions for a task
+ */
+export async function getSessionsByTask(taskId: string): Promise<ProjectQASession[]> {
+  await ensureDirectory();
+
+  try {
+    const files = await fs.readdir(QA_SESSIONS_DIR);
+    const sessions: ProjectQASession[] = [];
+
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        try {
+          const content = await fs.readFile(
+            path.join(QA_SESSIONS_DIR, file),
+            'utf-8'
+          );
+          const session = JSON.parse(content) as ProjectQASession;
+          // Check if this is a ProjectQASession (has projectId) and matches taskId
+          if (session.projectId && session.taskId === taskId) {
+            sessions.push(session);
+          }
+        } catch {
+          // Skip invalid files
+        }
+      }
+    }
+
+    return sessions;
+  } catch {
+    return [];
+  }
+}

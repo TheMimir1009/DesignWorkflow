@@ -2,10 +2,10 @@
 
 ---
 id: SPEC-CLAUDE-001
-version: "1.0.0"
-status: "planned"
+version: "1.1.0"
+status: "completed"
 created: "2026-01-07"
-updated: "2026-01-07"
+updated: "2026-01-08"
 author: "workflow-spec"
 priority: "high"
 tags: [claude-code, ai-generation, headless-mode, design-workflow, prompt-engineering]
@@ -16,6 +16,7 @@ tags: [claude-code, ai-generation, headless-mode, design-workflow, prompt-engine
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-01-07 | workflow-spec | 초기 SPEC 문서 작성 |
+| 1.1.0 | 2026-01-08 | MoAI-ADK | TDD 구현 완료 - 21개 파일, 212개 테스트 통과 |
 
 ## Overview
 
@@ -310,5 +311,5 @@ const designDocumentTemplate: PromptTemplate = {
 ---
 
 **TAG**: SPEC-CLAUDE-001
-**VERSION**: 1.0.0
-**STATUS**: planned
+**VERSION**: 1.1.0
+**STATUS**: completed

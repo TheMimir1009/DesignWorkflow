@@ -11,6 +11,25 @@ import { qaRouter, saveTaskQA, getTaskQA, generateDesign } from './routes/qa.ts'
 import { authRouter } from './routes/auth.ts';
 import { usersRouter } from './routes/users.ts';
 import { projectAccessRouter } from './routes/projectAccess.ts';
+import { generateRouter } from './routes/generate.ts';
+import { qaSessionsRouter } from './routes/qa-sessions.ts';
+import { templatesRouter } from './routes/templates.ts';
+import { questionsRouter } from './routes/questions.ts';
+import {
+  getProjectArchives,
+  getProjectArchive,
+  archiveTask,
+  restoreArchivedTask,
+  deleteProjectArchive,
+} from './routes/archives.ts';
+import { analyticsRouter } from './routes/analytics.ts';
+import { discoverProjectSystems } from './routes/discovery.ts';
+import { llmSettingsRouter } from './routes/llmSettings.ts';
+import { debugRouter } from './routes/debug.ts';
+import {
+  getProjectCompletedDocuments,
+  getProjectCompletedDocument,
+} from './routes/completedDocuments.ts';
 
 /**
  * Create and configure Express application
@@ -33,6 +52,13 @@ export function createApp(): Express {
   app.get('/api/projects/:projectId/tasks', getProjectTasks);
   app.post('/api/projects/:projectId/tasks', createProjectTask);
 
+  // Archive routes
+  app.get('/api/projects/:projectId/archives', getProjectArchives);
+  app.get('/api/projects/:projectId/archives/:archiveId', getProjectArchive);
+  app.post('/api/projects/:projectId/tasks/:taskId/archive', archiveTask);
+  app.post('/api/projects/:projectId/archives/:archiveId/restore', restoreArchivedTask);
+  app.delete('/api/projects/:projectId/archives/:archiveId', deleteProjectArchive);
+
   // Project access routes
   app.use('/api/projects/:projectId/access', projectAccessRouter);
 
@@ -46,6 +72,34 @@ export function createApp(): Express {
   app.post('/api/tasks/:taskId/qa', saveTaskQA);
   app.get('/api/tasks/:taskId/qa', getTaskQA);
   app.post('/api/tasks/:taskId/generate-design', generateDesign);
+
+  // AI Generation routes (Claude Code Integration)
+  app.use('/api/generate', generateRouter);
+
+  // QA Sessions routes
+  app.use('/api/qa-sessions', qaSessionsRouter);
+
+  // Templates routes
+  app.use('/api/templates', templatesRouter);
+
+  // Question Library routes (separate from Q&A questions)
+  app.use('/api/question-library', questionsRouter);
+
+  // Analytics routes
+  app.use('/api/projects/:projectId/analytics', analyticsRouter);
+
+  // Discovery routes (Auto-exploration)
+  app.post('/api/projects/:projectId/discover', discoverProjectSystems);
+
+  // Completed Documents routes (SPEC-DOCREF-001)
+  app.get('/api/projects/:projectId/completed-documents', getProjectCompletedDocuments);
+  app.get('/api/projects/:projectId/completed-documents/:taskId', getProjectCompletedDocument);
+
+  // LLM Settings routes (SPEC-LLM-001)
+  app.use('/api/projects', llmSettingsRouter);
+
+  // Debug routes (SPEC-DEBUG-003)
+  app.use('/api/debug', debugRouter);
 
   return app;
 }

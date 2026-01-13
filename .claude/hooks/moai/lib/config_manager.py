@@ -121,14 +121,16 @@ class ConfigManager:
                     else:
                         file_config = json.load(f)
                         config = self._merge_configs(DEFAULT_CONFIG.copy(), file_config)
-            except (
-                json.JSONDecodeError,
-                yaml.YAMLError if YAML_AVAILABLE else Exception,
-                IOError,
-                OSError,
-            ):
+            except (json.JSONDecodeError, IOError, OSError):
                 # Use defaults if file is corrupted or unreadable
                 config = DEFAULT_CONFIG.copy()
+            except Exception as e:
+                # Handle YAML errors or other parsing issues
+                if YAML_AVAILABLE and isinstance(e, yaml.YAMLError):
+                    config = DEFAULT_CONFIG.copy()
+                else:
+                    # Re-raise unexpected exceptions
+                    raise
         else:
             # Use defaults if file doesn't exist
             config = DEFAULT_CONFIG.copy()
@@ -342,6 +344,8 @@ class ConfigManager:
     def _merge_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Recursively merge two configuration dictionaries.
 
+        This method delegates to common.merge_configs() for consistent behavior.
+
         Args:
             base: Base configuration dictionary
             override: Override configuration dictionary
@@ -349,15 +353,9 @@ class ConfigManager:
         Returns:
             Merged configuration dictionary
         """
-        result = base.copy()
+        from .common import merge_configs
 
-        for key, value in override.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = self._merge_configs(result[key], value)
-            else:
-                result[key] = value
-
-        return result
+        return merge_configs(base, override)
 
 
 # Module-level helper functions

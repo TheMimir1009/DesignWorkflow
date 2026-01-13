@@ -2,12 +2,27 @@
  * Q&A API Routes Tests
  * TDD tests for Q&A API endpoints
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../server/index';
 import type { Express } from 'express';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+
+// Mock claudeCodeRunner to avoid actual AI calls
+vi.mock('../../server/utils/claudeCodeRunner.ts', () => ({
+  callClaudeCode: vi.fn().mockResolvedValue({
+    success: true,
+    output: { result: 'Mock AI generated design document' },
+    rawOutput: '{"result": "Mock AI generated design document"}',
+  }),
+  ClaudeCodeTimeoutError: class extends Error {
+    constructor(message: string, public timeout: number) {
+      super(message);
+      this.name = 'ClaudeCodeTimeoutError';
+    }
+  },
+}));
 
 describe('Q&A API Routes', () => {
   let app: Express;

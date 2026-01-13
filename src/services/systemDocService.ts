@@ -114,3 +114,70 @@ export async function deleteSystem(systemId: string): Promise<void> {
   });
   await handleResponse<{ deleted: boolean }>(response);
 }
+
+// ============================================================================
+// Document-centric API aliases (for integration test compatibility)
+// ============================================================================
+
+/**
+ * Fetch all system documents for a project (alias for getSystems)
+ * @param projectId - Project ID to fetch documents for
+ * @returns Promise resolving to array of system documents
+ */
+export async function getSystemDocuments(projectId: string): Promise<SystemDocument[]> {
+  return getSystems(projectId);
+}
+
+/**
+ * Create a new system document (alias for createSystem)
+ * @param projectId - Project ID to create document in
+ * @param data - Document creation data
+ * @returns Promise resolving to the created system document
+ */
+export async function createSystemDocument(projectId: string, data: CreateSystemDto): Promise<SystemDocument> {
+  return createSystem(projectId, data);
+}
+
+/**
+ * Update an existing system document (alias for updateSystem)
+ * @param _projectId - Project ID (unused but kept for API compatibility)
+ * @param documentId - Document ID to update
+ * @param data - Document update data
+ * @returns Promise resolving to the updated system document
+ */
+export async function updateSystemDocument(_projectId: string, documentId: string, data: UpdateSystemDto): Promise<SystemDocument> {
+  return updateSystem(documentId, data);
+}
+
+/**
+ * Delete a system document (alias for deleteSystem)
+ * @param _projectId - Project ID (unused but kept for API compatibility)
+ * @param documentId - Document ID to delete
+ * @returns Promise resolving when deletion is complete
+ */
+export async function deleteSystemDocument(_projectId: string, documentId: string): Promise<void> {
+  return deleteSystem(documentId);
+}
+
+/**
+ * Fetch all unique categories for a project
+ * @param projectId - Project ID to fetch categories for
+ * @returns Promise resolving to array of unique category names
+ */
+export async function getCategories(projectId: string): Promise<string[]> {
+  const documents = await getSystems(projectId);
+  const categories = [...new Set(documents.map((doc) => doc.category))];
+  return categories.sort();
+}
+
+/**
+ * Fetch all unique tags for a project
+ * @param projectId - Project ID to fetch tags for
+ * @returns Promise resolving to array of unique tag names
+ */
+export async function getTags(projectId: string): Promise<string[]> {
+  const documents = await getSystems(projectId);
+  const allTags = documents.flatMap((doc) => doc.tags);
+  const uniqueTags = [...new Set(allTags)];
+  return uniqueTags.sort();
+}

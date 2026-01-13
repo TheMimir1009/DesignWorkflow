@@ -19,9 +19,10 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { useTaskStore } from '../../store/taskStore';
+import { useArchiveStore } from '../../store/archiveStore';
 import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
 import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
-import { QAFormModal } from '../document';
+import { QAFormModal, DocumentViewerModal } from '../document';
 import type { Task, TaskStatus } from '../../types';
 import type { QACategory } from '../../types/qa';
 
@@ -81,6 +82,10 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [qaTaskId, setQATaskId] = useState<string | null>(null);
   const [qaCategory, setQACategory] = useState<QACategory>('game_mechanic');
 
+  // Document Viewer Modal state
+  const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+
   // Store selectors
   const tasks = useTaskStore((state) => state.tasks);
   const generatingTasks = useTaskStore((state) => state.generatingTasks);
@@ -89,6 +94,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const fetchTasks = useTaskStore((state) => state.fetchTasks);
   const updateTaskStatus = useTaskStore((state) => state.updateTaskStatus);
   const triggerAIGeneration = useTaskStore((state) => state.triggerAIGeneration);
+
+  // Archive store
+  const archiveTask = useArchiveStore((state) => state.archiveTask);
 
   // Modal state selectors
   const isCreateModalOpen = useTaskStore((state) => state.isCreateModalOpen);
@@ -157,6 +165,28 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setQATaskId(null);
   }, []);
 
+  // Open Document Viewer modal
+  const openDocViewer = useCallback((task: Task) => {
+    setViewingTask(task);
+    setIsDocViewerOpen(true);
+  }, []);
+
+  // Close Document Viewer modal
+  const closeDocViewer = useCallback(() => {
+    setIsDocViewerOpen(false);
+    setViewingTask(null);
+  }, []);
+
+  // Handle archive task
+  const handleArchive = useCallback(
+    async (taskId: string) => {
+      await archiveTask(projectId, taskId);
+      // Refresh tasks after archiving
+      fetchTasks(projectId);
+    },
+    [archiveTask, projectId, fetchTasks]
+  );
+
   // Handle Q&A completion
   const handleQAComplete = useCallback(() => {
     // Refresh tasks after Q&A completion
@@ -177,7 +207,29 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       if (!task) return;
 
       // Determine target status from drop zone
-      const targetStatus = over.id as TaskStatus;
+      // Check if over.id is a valid column status, otherwise get it from sortable data
+      const validStatuses: TaskStatus[] = ['featurelist', 'design', 'prd', 'prototype'];
+      let targetStatus: TaskStatus;
+
+      if (validStatuses.includes(over.id as TaskStatus)) {
+        // Dropped on a column
+        targetStatus = over.id as TaskStatus;
+      } else {
+        // Dropped on another task - get the column from sortable data
+        const overData = over.data?.current;
+        if (overData?.sortable?.containerId && validStatuses.includes(overData.sortable.containerId as TaskStatus)) {
+          targetStatus = overData.sortable.containerId as TaskStatus;
+        } else {
+          // Fallback: find the task and get its status
+          const overTask = tasks.find((t) => t.id === over.id);
+          if (overTask) {
+            targetStatus = overTask.status;
+          } else {
+            // Cannot determine target, abort
+            return;
+          }
+        }
+      }
 
       // Skip if same status
       if (task.status === targetStatus) return;
@@ -249,6 +301,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
               column={column}
               tasks={getTasksByStatus(column.id)}
               generatingTasks={generatingTasks}
+              projectId={projectId}
+              onViewDocuments={openDocViewer}
+              onArchive={handleArchive}
             />
           ))}
         </div>
@@ -294,6 +349,15 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           taskId={qaTaskId}
           onComplete={handleQAComplete}
           initialCategory={qaCategory}
+        />
+      )}
+
+      {/* Document Viewer Modal */}
+      {viewingTask && (
+        <DocumentViewerModal
+          isOpen={isDocViewerOpen}
+          onClose={closeDocViewer}
+          task={viewingTask}
         />
       )}
     </div>

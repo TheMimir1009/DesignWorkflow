@@ -2,8 +2,11 @@ import { useEffect } from 'react';
 import { Header } from './components/layout/Header';
 import { KanbanBoard } from './components/kanban';
 import { SystemSidebar, SystemCreateModal, SystemEditModal } from './components/system';
+import { DebugConsole } from './components/debug';
 import { useProjectStore } from './store/projectStore';
 import { useSystemStore } from './store/systemStore';
+import { useDebugStore } from './store/debugStore';
+import { useDebugShortcut } from './hooks/useDebugShortcut';
 
 function App() {
   const { fetchProjects, currentProject, isLoading, error } = useProjectStore();
@@ -14,6 +17,14 @@ function App() {
   const selectedSystem = useSystemStore((state) => state.selectedSystem);
   const closeCreateModal = useSystemStore((state) => state.closeCreateModal);
   const closeEditModal = useSystemStore((state) => state.closeEditModal);
+
+  // SPEC-DEBUG-002: Debug Console state and keyboard shortcut
+  const isOpen = useDebugStore((state) => state.isOpen);
+  const toggle = useDebugStore((state) => state.toggle);
+
+  // Register keyboard shortcut for Debug Console toggle
+  // REQ-E-001: Toggle Debug Console with Cmd+Shift+D (macOS) or Ctrl+Shift+D (Windows/Linux)
+  useDebugShortcut(toggle);
 
   // Initialize: fetch projects on mount
   useEffect(() => {
@@ -54,6 +65,13 @@ function App() {
         {/* System Sidebar (Right Side) */}
         {currentProject && (
           <SystemSidebar projectId={currentProject.id} />
+        )}
+
+        {/* SPEC-DEBUG-002: Debug Console (shown when isOpen is true) */}
+        {isOpen && (
+          <div className="w-96 border-l border-gray-700 bg-gray-900">
+            <DebugConsole />
+          </div>
         )}
       </div>
 

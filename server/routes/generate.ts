@@ -17,7 +17,35 @@ import {
   buildReviewPrompt,
   buildOptimizePrompt,
   buildAnalyzePrompt,
+  buildDesignDocumentPrompt,
+  buildPRDPrompt,
+  buildPrototypePrompt,
+  buildFeatureAnalysisPrompt,
+  buildDocumentModifyPrompt,
+  type ProjectContext,
 } from '../utils/promptBuilder.ts';
+import { getLLMSettingsOrDefault } from '../utils/llmSettingsStorage.ts';
+import { createLLMProvider, type LLMProviderInterface, getSharedLogger } from '../utils/llmProvider.ts';
+import {
+  getModelConfigForStage,
+  isProviderConfigured,
+  type LLMModelConfig,
+  type TaskStage,
+  type LLMProvider,
+} from '../../src/types/llm.ts';
+import { addGenerationHistoryEntry } from '../utils/taskStorage.ts';
+import type { GenerationDocumentType, GenerationAction } from '../../src/types/index.ts';
+
+/**
+ * In-memory storage for generation history (for demo purposes)
+ * In production, this would be stored in a database
+ */
+const generationHistory: Map<string, Array<{
+  id: string;
+  type: string;
+  createdAt: string;
+  status: string;
+}>> = new Map();
 
 export const generateRouter = Router();
 
@@ -86,6 +114,199 @@ function handleClaudeCodeError(error: Error, res: Response): void {
   res.status(500).json({
     error: 'Internal server error',
     message: error.message,
+  });
+}
+
+/**
+ * Result of LLM provider selection
+ */
+interface LLMProviderSelection {
+  provider: LLMProviderInterface;
+  config: LLMModelConfig;
+  isDefault: boolean;
+}
+
+/**
+ * Select LLM provider based on project settings and task stage
+ * Returns the appropriate provider or throws an error if not available
+ * NO AUTO-FALLBACK: If configured provider fails validation, error is returned
+ * Always uses shared logger for debug console (SPEC-DEBUG-003)
+ */
+async function selectLLMProvider(
+  projectId: string | undefined,
+  stage: TaskStage
+): Promise<LLMProviderSelection> {
+  // Get shared logger for debug console
+  const sharedLogger = getSharedLogger();
+
+  // If no projectId, use default Claude Code
+  if (!projectId) {
+    const settings = await getLLMSettingsOrDefault('default');
+    const config = settings.taskStageConfig.defaultModel;
+    return {
+      provider: createLLMProvider({
+        provider: 'claude-code',
+        apiKey: '',
+        isEnabled: true,
+        connectionStatus: 'connected',
+      }, true), // Enable shared logging
+      config,
+      isDefault: true,
+    };
+  }
+
+  // Get project settings
+  const settings = await getLLMSettingsOrDefault(projectId);
+  const modelConfig = getModelConfigForStage(settings.taskStageConfig, stage);
+
+  // Check if using default (Claude Code)
+  if (modelConfig.provider === 'claude-code') {
+    return {
+      provider: createLLMProvider({
+        provider: 'claude-code',
+        apiKey: '',
+        isEnabled: true,
+        connectionStatus: 'connected',
+      }, true), // Enable shared logging
+      config: modelConfig,
+      isDefault: true,
+    };
+  }
+
+  // Find the provider settings
+  const providerSettings = settings.providers.find(
+    (p) => p.provider === modelConfig.provider
+  );
+
+  if (!providerSettings) {
+    throw new LLMProviderError(
+      `Provider ${modelConfig.provider} not found in settings`,
+      modelConfig.provider,
+      modelConfig.modelId
+    );
+  }
+
+  // Check if provider is enabled
+  if (!providerSettings.isEnabled) {
+    throw new LLMProviderError(
+      `Provider ${modelConfig.provider} is not enabled. Please enable it in project settings.`,
+      modelConfig.provider,
+      modelConfig.modelId
+    );
+  }
+
+  // Check if provider is configured (has API key or valid endpoint)
+  if (!isProviderConfigured(providerSettings)) {
+    throw new LLMProviderError(
+      `Provider ${modelConfig.provider} is not configured. Please add API key or configure endpoint.`,
+      modelConfig.provider,
+      modelConfig.modelId
+    );
+  }
+
+  // Create and return the provider with shared logging
+  return {
+    provider: createLLMProvider(providerSettings, true), // Enable shared logging
+    config: modelConfig,
+    isDefault: false,
+  };
+}
+
+/**
+ * Custom error class for LLM provider errors
+ */
+class LLMProviderError extends Error {
+  public provider: string;
+  public model: string;
+
+  constructor(message: string, provider: string, model: string) {
+    super(message);
+    this.name = 'LLMProviderError';
+    this.provider = provider;
+    this.model = model;
+  }
+}
+
+/**
+ * Record generation history for a task (SPEC-MODELHISTORY-001)
+ * This is a non-blocking operation - errors are logged but don't affect the response
+ */
+async function recordGenerationHistory(
+  projectId: string | undefined,
+  taskId: string | undefined,
+  documentType: GenerationDocumentType,
+  action: GenerationAction,
+  provider: LLMProvider,
+  model: string,
+  tokens?: { input: number; output: number },
+  feedback?: string
+): Promise<void> {
+  if (!projectId || !taskId) {
+    // Skip recording if projectId or taskId is not provided
+    return;
+  }
+
+  try {
+    await addGenerationHistoryEntry(projectId, taskId, {
+      documentType,
+      action,
+      provider,
+      model,
+      tokens,
+      feedback,
+    });
+  } catch (error) {
+    // Log error but don't fail the request
+    console.error('Failed to record generation history:', error);
+  }
+}
+
+/**
+ * Handle LLM provider errors
+ */
+function handleLLMProviderError(
+  error: unknown,
+  res: Response,
+  provider?: string,
+  model?: string
+): void {
+  if (error instanceof LLMProviderError) {
+    res.status(400).json({
+      error: error.message,
+      provider: error.provider,
+      model: error.model,
+    });
+    return;
+  }
+
+  // Handle Claude Code specific errors (for backward compatibility)
+  if (error instanceof Error) {
+    if (error.name === 'ClaudeCodeTimeoutError') {
+      res.status(504).json({
+        error: 'Claude Code process timeout',
+        message: error.message,
+        provider: provider || 'claude-code',
+        model: model || 'claude-3.5-sonnet',
+      });
+      return;
+    }
+
+    if (error.name === 'ClaudeCodeError') {
+      res.status(500).json({
+        error: 'Claude Code execution failed',
+        message: error.message,
+        provider: provider || 'claude-code',
+        model: model || 'claude-3.5-sonnet',
+      });
+      return;
+    }
+  }
+
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  res.status(500).json({
+    error: `LLM generation failed: ${message}`,
+    provider: provider || 'unknown',
+    model: model || 'unknown',
   });
 }
 
@@ -258,3 +479,397 @@ generateRouter.post(
     }
   }
 );
+
+/**
+ * POST /api/generate/design-document
+ * Generate design document from Q&A responses
+ * Supports LLM provider selection via projectId
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
+ */
+generateRouter.post(
+  '/design-document',
+  validateRequired(['qaResponses']),
+  async (req: Request, res: Response) => {
+    let selectedProvider: string | undefined;
+    let selectedModel: string | undefined;
+
+    try {
+      const { qaResponses, referenceSystemIds, workingDir, projectId, taskId } = req.body;
+
+      const prompt = buildDesignDocumentPrompt(qaResponses, referenceSystemIds);
+
+      // Select LLM provider based on project settings
+      const { provider, config, isDefault } = await selectLLMProvider(projectId, 'design');
+      selectedProvider = config.provider;
+      selectedModel = config.modelId;
+
+      // If using default Claude Code, use the claudeCodeRunner
+      if (isDefault) {
+        const result = await claudeCodeRunner(
+          prompt,
+          workingDir || DEFAULT_WORKING_DIR,
+          { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        await recordGenerationHistory(
+          projectId,
+          taskId,
+          'design',
+          'create',
+          config.provider as LLMProvider,
+          config.modelId
+        );
+
+        res.json({
+          success: true,
+          data: result.output,
+          rawOutput: result.rawOutput,
+          provider: config.provider,
+          model: config.modelId,
+        });
+        return;
+      }
+
+      // Use selected LLM provider
+      const result = await provider.generate(prompt, config, workingDir || DEFAULT_WORKING_DIR);
+
+      if (!result.success) {
+        // NO AUTO-FALLBACK: Return error if LLM fails
+        res.status(500).json({
+          error: `LLM generation failed: ${result.error}`,
+          provider: result.provider,
+          model: result.model,
+        });
+        return;
+      }
+
+      // Record generation history (SPEC-MODELHISTORY-001)
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        'design',
+        'create',
+        result.provider as LLMProvider,
+        result.model,
+        result.tokens
+      );
+
+      res.json({
+        success: true,
+        data: result.content,
+        rawOutput: result.rawOutput,
+        provider: result.provider,
+        model: result.model,
+      });
+    } catch (error) {
+      handleLLMProviderError(error, res, selectedProvider, selectedModel);
+    }
+  }
+);
+
+/**
+ * POST /api/generate/prd
+ * Generate PRD from design document
+ * Supports LLM provider selection via projectId
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
+ */
+generateRouter.post(
+  '/prd',
+  validateRequired(['designDocContent']),
+  async (req: Request, res: Response) => {
+    let selectedProvider: string | undefined;
+    let selectedModel: string | undefined;
+
+    try {
+      const { designDocContent, projectContext, workingDir, projectId, taskId } = req.body;
+
+      // Handle projectContext: can be string (legacy) or ProjectContext object (new)
+      let parsedProjectContext: ProjectContext | undefined;
+      if (projectContext) {
+        if (typeof projectContext === 'string') {
+          // Legacy: string projectContext - parse as techStack description
+          parsedProjectContext = {
+            techStack: [projectContext],
+          };
+        } else if (typeof projectContext === 'object') {
+          // New: structured ProjectContext object
+          parsedProjectContext = projectContext as ProjectContext;
+        }
+      }
+
+      const prompt = buildPRDPrompt(designDocContent, parsedProjectContext);
+
+      // Select LLM provider based on project settings
+      const { provider, config, isDefault } = await selectLLMProvider(projectId, 'prd');
+      selectedProvider = config.provider;
+      selectedModel = config.modelId;
+
+      // If using default Claude Code, use the claudeCodeRunner
+      if (isDefault) {
+        const result = await claudeCodeRunner(
+          prompt,
+          workingDir || DEFAULT_WORKING_DIR,
+          { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        await recordGenerationHistory(
+          projectId,
+          taskId,
+          'prd',
+          'create',
+          config.provider as LLMProvider,
+          config.modelId
+        );
+
+        res.json({
+          success: true,
+          data: result.output,
+          rawOutput: result.rawOutput,
+          provider: config.provider,
+          model: config.modelId,
+        });
+        return;
+      }
+
+      // Use selected LLM provider
+      const result = await provider.generate(prompt, config, workingDir || DEFAULT_WORKING_DIR);
+
+      if (!result.success) {
+        // NO AUTO-FALLBACK: Return error if LLM fails
+        res.status(500).json({
+          error: `LLM generation failed: ${result.error}`,
+          provider: result.provider,
+          model: result.model,
+        });
+        return;
+      }
+
+      // Record generation history (SPEC-MODELHISTORY-001)
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        'prd',
+        'create',
+        result.provider as LLMProvider,
+        result.model,
+        result.tokens
+      );
+
+      res.json({
+        success: true,
+        data: result.content,
+        rawOutput: result.rawOutput,
+        provider: result.provider,
+        model: result.model,
+      });
+    } catch (error) {
+      handleLLMProviderError(error, res, selectedProvider, selectedModel);
+    }
+  }
+);
+
+/**
+ * POST /api/generate/prototype
+ * Generate HTML prototype from PRD
+ * Supports LLM provider selection via projectId
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
+ */
+generateRouter.post(
+  '/prototype',
+  validateRequired(['prdContent']),
+  async (req: Request, res: Response) => {
+    let selectedProvider: string | undefined;
+    let selectedModel: string | undefined;
+
+    try {
+      const { prdContent, styleFramework, workingDir, projectId, taskId } = req.body;
+
+      let prompt = buildPrototypePrompt(prdContent);
+      if (styleFramework) {
+        prompt += `\n\n## Styling Framework\nUse ${styleFramework} for styling.`;
+      }
+
+      // Select LLM provider based on project settings
+      const { provider, config, isDefault } = await selectLLMProvider(projectId, 'prototype');
+      selectedProvider = config.provider;
+      selectedModel = config.modelId;
+
+      // If using default Claude Code, use the claudeCodeRunner
+      if (isDefault) {
+        const result = await claudeCodeRunner(
+          prompt,
+          workingDir || DEFAULT_WORKING_DIR,
+          { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+        );
+
+        // Record generation history (SPEC-MODELHISTORY-001)
+        await recordGenerationHistory(
+          projectId,
+          taskId,
+          'prototype',
+          'create',
+          config.provider as LLMProvider,
+          config.modelId
+        );
+
+        res.json({
+          success: true,
+          data: result.output,
+          rawOutput: result.rawOutput,
+          provider: config.provider,
+          model: config.modelId,
+        });
+        return;
+      }
+
+      // Use selected LLM provider
+      const result = await provider.generate(prompt, config, workingDir || DEFAULT_WORKING_DIR);
+
+      if (!result.success) {
+        // NO AUTO-FALLBACK: Return error if LLM fails
+        res.status(500).json({
+          error: `LLM generation failed: ${result.error}`,
+          provider: result.provider,
+          model: result.model,
+        });
+        return;
+      }
+
+      // Record generation history (SPEC-MODELHISTORY-001)
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        'prototype',
+        'create',
+        result.provider as LLMProvider,
+        result.model,
+        result.tokens
+      );
+
+      res.json({
+        success: true,
+        data: result.content,
+        rawOutput: result.rawOutput,
+        provider: result.provider,
+        model: result.model,
+      });
+    } catch (error) {
+      handleLLMProviderError(error, res, selectedProvider, selectedModel);
+    }
+  }
+);
+
+/**
+ * POST /api/generate/analyze-features
+ * Analyze feature list and extract keywords
+ */
+generateRouter.post(
+  '/analyze-features',
+  validateRequired(['featureList']),
+  async (req: Request, res: Response) => {
+    try {
+      const { featureList, workingDir } = req.body;
+
+      const prompt = buildFeatureAnalysisPrompt(featureList);
+
+      const result = await claudeCodeRunner(
+        prompt,
+        workingDir || DEFAULT_WORKING_DIR,
+        { timeout: 120000, allowedTools: ['Read', 'Grep'] }
+      );
+
+      res.json({
+        success: true,
+        data: result.output,
+        rawOutput: result.rawOutput,
+      });
+    } catch (error) {
+      handleClaudeCodeError(error as Error, res);
+    }
+  }
+);
+
+/**
+ * POST /api/generate/modify
+ * Modify existing document based on instructions
+ * Supports generation history recording via taskId (SPEC-MODELHISTORY-001)
+ */
+generateRouter.post(
+  '/modify',
+  validateRequired(['originalContent', 'modificationInstructions']),
+  async (req: Request, res: Response) => {
+    try {
+      const { originalContent, modificationInstructions, documentType, workingDir, projectId, taskId } = req.body;
+
+      let prompt = buildDocumentModifyPrompt(originalContent, modificationInstructions);
+      if (documentType) {
+        prompt = `## Document Type: ${documentType}\n\n${prompt}`;
+      }
+
+      const result = await claudeCodeRunner(
+        prompt,
+        workingDir || DEFAULT_WORKING_DIR,
+        { timeout: 180000, allowedTools: ['Read', 'Grep'] }
+      );
+
+      // Record generation history for modification (SPEC-MODELHISTORY-001)
+      // Map documentType to GenerationDocumentType
+      let mappedDocType: GenerationDocumentType = 'design';
+      if (documentType === 'prd' || documentType === 'PRD') {
+        mappedDocType = 'prd';
+      } else if (documentType === 'prototype' || documentType === 'Prototype') {
+        mappedDocType = 'prototype';
+      }
+
+      await recordGenerationHistory(
+        projectId,
+        taskId,
+        mappedDocType,
+        'modify',
+        'claude-code',
+        'claude-3.5-sonnet',
+        undefined,
+        modificationInstructions
+      );
+
+      res.json({
+        success: true,
+        data: result.output,
+        rawOutput: result.rawOutput,
+        provider: 'claude-code',
+        model: 'claude-3.5-sonnet',
+      });
+    } catch (error) {
+      handleClaudeCodeError(error as Error, res);
+    }
+  }
+);
+
+/**
+ * GET /api/generate/status
+ * Get generation service status
+ */
+generateRouter.get('/status', (_req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    healthy: true,
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * GET /api/generate/history/:projectId
+ * Get generation history for a project
+ */
+generateRouter.get('/history/:projectId', (req: Request, res: Response) => {
+  const { projectId } = req.params;
+  const history = generationHistory.get(projectId) || [];
+
+  res.json({
+    projectId,
+    history,
+  });
+});
