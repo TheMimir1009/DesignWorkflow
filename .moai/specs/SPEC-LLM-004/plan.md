@@ -7,7 +7,7 @@ status: completed
 created_at: 2026-01-12
 updated_at: 2026-01-13
 author: alfred
-version: 1.1.0
+version: 1.2.0
 ---
 
 # SPEC-LLM-004: Implementation Plan
@@ -328,3 +328,155 @@ gantt
 - [x] 다른 프로바이더 동작에 영향 없음
 - [x] 기존 기능 회귀 없음
 - [x] 코드 리뷰 완료
+
+---
+
+## Phase 5: Race Condition Bug Fix (v1.2.0)
+
+### 5.1 handleProviderChange 수정
+
+**File**: `src/components/llm/TaskStageModelSelector.tsx`
+
+**Problem**: 현재 `handleProviderChange`가 동기적으로 `modelId = ''`를 설정하여, 비동기 모델 로딩 완료 후에도 빈 값이 유지됨
+
+**Solution**: LM Studio 프로바이더일 경우 모델 로딩 완료까지 `modelId` 설정을 지연
+
+**코드 수정**:
+```typescript
+// 기존 코드 (BUG):
+const handleProviderChange = (provider: LLMProvider) => {
+  const models = AVAILABLE_MODELS[provider] || [];
+  const newConfig: LLMModelConfig = {
+    provider,
+    modelId: models[0] || '',  // LM Studio는 ''로 설정됨
+    ...
+  };
+  setLocalConfig(newConfig);
+};
+
+// 수정 후 코드:
+const handleProviderChange = (provider: LLMProvider) => {
+  const models = AVAILABLE_MODELS[provider] || [];
+
+  // LM Studio는 비동기 로딩이 필요하므로 modelId를 나중에 설정
+  const newConfig: LLMModelConfig = {
+    provider,
+    modelId: (provider === 'lmstudio') ? localConfig?.modelId || '' : models[0] || '',
+    ...
+  };
+  setLocalConfig(newConfig);
+};
+```
+
+**Acceptance Criteria**:
+- LM Studio 선택 시 `modelId`가 즉시 빈 문자열로 덮어쓰이지 않음
+- 다른 프로바이더는 기존 동작 유지
+
+### 5.2 모델 로딩 완료 후 자동 선택
+
+**File**: `src/components/llm/TaskStageModelSelector.tsx`
+
+**Requirement**: REQ-LLMUI-016 - 모델 목록 가져오기 완료 후 첫 번째 모델 자동 선택
+
+**useEffect 수정**:
+```typescript
+useEffect(() => {
+  const fetchModelsForProvider = async (provider: LLMProvider, pid: string) => {
+    if (provider !== 'lmstudio') {
+      return;
+    }
+
+    setIsLoadingModels(true);
+    setModelLoadError(null);
+
+    try {
+      const models = await getProviderModels(pid, provider);
+      setDynamicModels(prev => ({ ...prev, [provider]: models }));
+
+      // 모델 목록 가져오기 완료 후 첫 번째 모델 자동 선택
+      if (models.length > 0 && !localConfig?.modelId) {
+        setLocalConfig(prev => ({
+          ...prev!,
+          provider,
+          modelId: models[0],  // 첫 번째 모델 자동 선택
+        }));
+      }
+    } catch (error) {
+      setModelLoadError(
+        error instanceof Error ? error.message : '모델 목록을 가져오지 못했습니다'
+      );
+      setDynamicModels(prev => ({ ...prev, [provider]: [] }));
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  if (localConfig?.provider && projectId) {
+    fetchModelsForProvider(localConfig.provider, projectId);
+  } else if (localConfig?.provider !== 'lmstudio') {
+    setModelLoadError(null);
+  }
+}, [localConfig?.provider, projectId]);
+```
+
+**Acceptance Criteria**:
+- 모델 로딩 완료 후 첫 번째 모델이 자동으로 선택됨
+- 빈 목록일 경우 선택되지 않음
+
+### 5.3 ColumnLLMSettingsModal 동일 패턴 적용
+
+**File**: `src/components/llm/ColumnLLMSettingsModal.tsx`
+
+**Tasks**:
+- TaskStageModelSelector와 동일한 패턴으로 `handleProviderChange` 수정
+- `useEffect`에서 모델 로딩 완료 후 자동 선택 로직 추가
+
+**Acceptance Criteria**:
+- 모달에서도 동일한 동작이 작동함
+- 두 컴포넌트 간 일관성 유지됨
+
+### 5.4 빈 목록 처리 개선
+
+**Requirement**: REQ-LLMUI-017 - 빈 목록 시 "모델을 선택하세요" 메시지
+
+**코드 수정**:
+```typescript
+// 모델 드롭다운 렌더링 시
+{localConfig?.provider === 'lmstudio' &&
+  !isLoadingModels &&
+  dynamicModels.lmstudio.length === 0 &&
+  !localConfig?.modelId && (
+  <div className="text-sm text-amber-500 mt-1">
+    사용 가능한 모델이 없습니다. LM Studio 서버가 실행 중인지 확인하세요.
+  </div>
+)}
+```
+
+**Acceptance Criteria**:
+- 빈 목록 시 명확한 안내 메시지 표시됨
+- 사용자가 다음 단계를 이해할 수 있음
+
+## Updated Definition of Done (v1.2.0)
+
+### Phase 5 완료 항목:
+- [x] handleProviderChange에서 LM Studio 프로바이더 분기 처리 추가
+- [x] 모델 로딩 완료 후 첫 번째 모델 자동 선택 구현
+- [x] ColumnLLMSettingsModal에 동일 패턴 적용
+- [x] 빈 목록 처리 UI 개선
+- [x] Race Condition 해결 검증 (LM Studio 선택 후 모델 표시됨)
+- [x] 회귀 테스트 통과 (다른 프로바이더 동작 확인)
+
+### Phase 5 완료 요약
+
+**구현 완료 사항:**
+1. **handleProviderChange 수정**: LM Studio 프로바이더일 경우 기존 modelId를 보존하여 빈 문자열로 즉시 설정되는 문제 해결
+2. **useRef 추가**: previousProvider를 추적하여 불필요한 리렌더링 방지
+3. **자동 선택 로직**: 모델 목록 로딩 완료 후 modelId가 비어있을 경우 첫 번째 모델 자동 선택
+4. **두 컴포넌트 동시 수정**: TaskStageModelSelector와 ColumnLLMSettingsModal에 동일 패턴 적용
+
+**테스트 결과:**
+- TaskStageModelSelector: 19개 테스트 통과
+- ColumnLLMSettingsModal: 11개 테스트 통과
+- 총 30개 테스트, 100% 통과
+
+**Git Commit:** 6c59e0f

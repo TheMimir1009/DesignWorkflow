@@ -7,7 +7,7 @@ status: completed
 created_at: 2026-01-12
 updated_at: 2026-01-13
 author: alfred
-version: 1.1.0
+version: 1.2.0
 related_specs:
   - SPEC-LLM-002: LLM Connection Test Logging
   - SPEC-LLM-003: LM Studio Provider Refactoring
@@ -50,6 +50,32 @@ LM Studio 연결 테스트는 성공하고 API 로그에 모델 목록이 기록
 
 프론트엔드 컴포넌트가 정적 모델 목록(`AVAILABLE_MODELS`)을 사용하고, 동적 API 호출(`getProviderModels()`)을 사용하지 않음
 
+### Bug Fix: Race Condition (v1.2.0)
+
+**버그 현상**: LM Studio 선택 후 모델 목록이 로딩되었음에도 "모델 없음"으로 표시됨
+
+**Race Condition 원인**:
+
+```typescript
+// TaskStageModelSelector.tsx (Lines 99-108) - BUG
+const handleProviderChange = (provider: LLMProvider) => {
+  const models = AVAILABLE_MODELS[provider] || [];  // LM Studio는 []
+  const newConfig: LLMModelConfig = {
+    provider,
+    modelId: models[0] || '',  // 즉시 빈 문자열 설정 ← BUG
+    ...
+  };
+  // ... 이후 useEffect가 비동기로 모델을 가져오지만 이미 modelId는 ''
+};
+```
+
+**버그 흐름**:
+1. 사용자가 "LM Studio" 선택
+2. `handleProviderChange`가 **동기 실행** → `modelId = ''` 빈 문자열 설정
+3. `useEffect`가 `getProviderModels()` **비동기 호출**
+4. 모델 가져오기 성공하지만 config는 이미 빈 `modelId`를 가짐
+5. 결과: "모델 없음" 표시
+
 ## Requirements (EARS Format)
 
 ### Ubiquitous Requirements (항상 적용)
@@ -91,6 +117,14 @@ LM Studio 연결 테스트는 성공하고 API 로그에 모델 목록이 기록
 **REQ-LLMUI-014**: WHERE 가능하면, 시스템은 모델 목록을 세션 동안 캐싱하여 불필요한 API 호출을 줄여야 한다.
 
 **REQ-LLMUI-015**: WHERE 가능하면, 시스템은 모델 목록을 자동으로 갱신하는 "새로고침" 버튼을 제공해야 한다.
+
+### Bug Fix Requirements (v1.2.0 - Race Condition)
+
+**REQ-LLMUI-016**: WHEN 사용자가 LM Studio 프로바이더를 선택하면, 시스템은 모델 목록을 가져온 후 첫 번째 모델을 자동으로 선택해야 한다.
+
+**REQ-LLMUI-017**: IF LM Studio 프로바이더이고 모델 목록이 비어있으면, 시스템은 모델 ID를 비워두고 사용자에게 "모델을 선택하세요" 메시지를 표시해야 한다.
+
+**REQ-LLMUI-018**: 시스템은 `handleProviderChange`에서 정적 `AVAILABLE_MODELS`를 사용하여 LM Studio 모델을 선택해서는 안 된다. 대신 비동기 모델 로딩 완료 후 선택해야 한다.
 
 ## Technical Specification
 
