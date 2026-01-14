@@ -33,6 +33,13 @@ Game design pipeline visualization and AI-powered document generation workflow s
   - 53 tests passing with 95.55% coverage
   - Core logging modules: llmLogger.ts, tokenExtractor.ts, modelPricing.ts
 - **LM Studio Dynamic Model Selection UI (SPEC-LLM-004)**
+- **칸반 컬럼별 LLM 설정 표시 기능 (SPEC-LLM-005)**
+  - 컬럼 헤더에 현재 LLM 모델 정보 표시
+  - 컬럼별 설정과 프로젝트 기본값 시각적 구분
+  - ModelBadge 컴포넌트와 프로바이더 아이콘 제공
+  - 클릭 시 ColumnLLMSettingsModal 오픈
+  - 19/19 테스트 통과, 100% 커버리지
+  - 관련 SPEC: SPEC-LLM-001, SPEC-LLM-004
   - LM Studio 프로바이더 선택 시 동적 모델 목록 표시
   - 로딩 상태 및 에러 처리 UI 개선
   - TaskStageModelSelector 및 ColumnLLMSettingsModal 수정
