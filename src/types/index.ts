@@ -565,6 +565,92 @@ export interface GenerationHistoryEntry {
 }
 
 // =============================================================================
+// Prompt Template Management Types (SPEC-PROMPT-001)
+// =============================================================================
+
+/**
+ * Prompt template category
+ */
+export type PromptCategory = 'document-generation' | 'code-operation' | 'analysis' | 'utility';
+
+/**
+ * Prompt variable type for dynamic content substitution
+ */
+export type PromptVariableType = 'string' | 'array' | 'object';
+
+/**
+ * Prompt variable definition for template variables
+ */
+export interface PromptVariable {
+  name: string;
+  type: PromptVariableType;
+  description: string;
+  required: boolean;
+  example: string;
+}
+
+/**
+ * Prompt template for managing reusable prompts
+ */
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  category: PromptCategory;
+  description: string;
+  content: string;
+  variables: PromptVariable[];
+  isModified: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  defaultContent: string;
+}
+
+/**
+ * Prompt version for version history
+ */
+export interface PromptVersion {
+  id: string;
+  promptId: string;
+  version: number;
+  content: string;
+  createdAt: string;
+}
+
+/**
+ * Create prompt template DTO
+ */
+export interface CreatePromptTemplateDto {
+  name: string;
+  category: PromptCategory;
+  description: string;
+  content: string;
+  variables: PromptVariable[];
+}
+
+/**
+ * Update prompt template DTO
+ */
+export interface UpdatePromptTemplateDto {
+  name?: string;
+  category?: PromptCategory;
+  description?: string;
+  content?: string;
+  variables?: PromptVariable[];
+}
+
+/**
+ * Prompt Store State for Zustand
+ */
+export interface PromptTemplateState {
+  prompts: PromptTemplate[];
+  selectedPromptId: string | null;
+  selectedCategory: PromptCategory | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// =============================================================================
 // Debug Console Types (SPEC-DEBUG-001)
 // =============================================================================
 
