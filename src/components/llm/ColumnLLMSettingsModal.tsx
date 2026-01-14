@@ -2,7 +2,7 @@
  * ColumnLLMSettingsModal Component
  * Modal for configuring LLM settings for a specific kanban column
  */
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { useLLMSettingsStore } from '../../store/llmSettingsStore';
 import type {
   LLMModelConfig,
@@ -58,6 +58,9 @@ export function ColumnLLMSettingsModal({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelLoadError, setModelLoadError] = useState<string | null>(null);
 
+  // SPEC-LLM-004: Track previous provider to detect provider changes
+  const prevProviderRef = useRef<LLMProvider | null>(null);
+
   useEffect(() => {
     if (isOpen && projectId) {
       fetchSettings(projectId);
@@ -76,6 +79,7 @@ export function ColumnLLMSettingsModal({
   }, [settingsKey, isOpen]);
 
   // TASK-008: Add useEffect to fetch models for LM Studio
+  // SPEC-LLM-004: Add auto-select logic after models are loaded
   useEffect(() => {
     const fetchModelsForProvider = async (provider: LLMProvider, pid: string) => {
       if (provider !== 'lmstudio') return;
@@ -84,6 +88,18 @@ export function ColumnLLMSettingsModal({
       try {
         const models = await getProviderModels(pid, provider);
         setDynamicModels(prev => ({ ...prev, [provider]: models }));
+
+        // SPEC-LLM-004: Auto-select first model if no modelId exists
+        // Use the latest localConfig from state to check for modelId
+        setLocalConfig(currentConfig => {
+          if (models.length > 0 && !currentConfig?.modelId) {
+            return {
+              ...currentConfig!,
+              modelId: models[0],
+            };
+          }
+          return currentConfig;
+        });
       } catch (error) {
         setModelLoadError(error instanceof Error ? error.message : '모델 목록을 가져오지 못했습니다');
         setDynamicModels(prev => ({ ...prev, [provider]: [] }));
@@ -92,8 +108,23 @@ export function ColumnLLMSettingsModal({
       }
     };
 
-    if (localConfig?.provider && projectId) {
-      fetchModelsForProvider(localConfig.provider, projectId);
+    const currentProvider = localConfig?.provider || null;
+
+    // SPEC-LLM-004 FIX: Only fetch if:
+    // 1. Provider is lmstudio, AND
+    // 2. projectId exists, AND
+    // 3. Either this is initial mount (ref is null) OR provider has changed
+    if (currentProvider === 'lmstudio' && projectId) {
+      const providerChanged = prevProviderRef.current !== currentProvider;
+      if (providerChanged) {
+        prevProviderRef.current = currentProvider;
+        fetchModelsForProvider(currentProvider, projectId);
+      }
+    }
+    // SPEC-LLM-004 FIX: Reset ref when provider is NOT lmstudio
+    // This allows re-fetch when switching back to LM Studio from another provider
+    else if (currentProvider && currentProvider !== 'lmstudio') {
+      prevProviderRef.current = currentProvider;
     }
   }, [localConfig?.provider, projectId]);
 
@@ -113,6 +144,7 @@ export function ColumnLLMSettingsModal({
 
   const enabledProviders = settings?.providers.filter((p) => p.isEnabled) || [];
 
+  // SPEC-LLM-004: Preserve existing modelId when switching to lmstudio provider
   const handleProviderChange = (provider: LLMProvider | '') => {
     if (!provider) {
       setLocalConfig(null);
@@ -122,7 +154,11 @@ export function ColumnLLMSettingsModal({
     const models = AVAILABLE_MODELS[provider as LLMProvider] || [];
     const newConfig: LLMModelConfig = {
       provider: provider as LLMProvider,
-      modelId: models[0] || '',
+      // SPEC-LLM-004: For LM Studio, preserve existing modelId to avoid race condition
+      // The useEffect will fetch models and auto-select if needed
+      modelId: (provider === 'lmstudio')
+        ? (localConfig?.modelId || '')
+        : (models[0] || ''),
       ...DEFAULT_MODEL_PARAMS,
     };
     setLocalConfig(newConfig);

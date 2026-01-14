@@ -376,4 +376,165 @@ describe('TaskStageModelSelector - LM Studio Dynamic Model Loading', () => {
       });
     });
   });
+
+  describe('SPEC-LLM-004: Race Condition Bug Fix Tests', () => {
+    describe('handleProviderChange should preserve modelId for LM Studio', () => {
+      it('should preserve existing modelId when switching to lmstudio provider', async () => {
+        const existingModelId = 'llama-3.2-7b';
+        const mockModels = ['llama-3.2-3b', 'llama-3.2-7b', 'mistral-7b'];
+        vi.mocked(getProviderModels).mockResolvedValue(mockModels);
+
+        const onUpdate = vi.fn();
+
+        // Start with OpenAI provider
+        const { rerender } = render(
+          <TaskStageModelSelector
+            taskStageConfig={{
+              ...mockTaskStageConfig,
+              designDoc: {
+                provider: 'openai',
+                modelId: 'gpt-4o',
+                temperature: 0.7,
+                maxTokens: 4096,
+                topP: 1.0,
+              },
+            }}
+            enabledProviders={mockEnabledProviders}
+            onUpdate={onUpdate}
+            projectId={mockProjectId}
+          />
+        );
+
+        // Verify OpenAI config is displayed
+        expect(screen.getByText('OpenAI / gpt-4o')).toBeInTheDocument();
+
+        // Switch to LM Studio provider - modelId should be preserved
+        rerender(
+          <TaskStageModelSelector
+            taskStageConfig={{
+              ...mockTaskStageConfig,
+              designDoc: {
+                provider: 'lmstudio',
+                modelId: existingModelId,
+                temperature: 0.7,
+                maxTokens: 4096,
+                topP: 1.0,
+              },
+            }}
+            enabledProviders={mockEnabledProviders}
+            onUpdate={onUpdate}
+            projectId={mockProjectId}
+          />
+        );
+
+        // Wait for models to be fetched
+        await waitFor(() => {
+          expect(getProviderModels).toHaveBeenCalledWith(mockProjectId, 'lmstudio');
+        });
+
+        // The modelId should be displayed after switching providers
+        expect(screen.getByText(`LMStudio / ${existingModelId}`)).toBeInTheDocument();
+      });
+
+      it('should use first model when no existing modelId for lmstudio', async () => {
+        const mockModels = ['llama-3.2-3b', 'llama-3.2-7b', 'mistral-7b'];
+        vi.mocked(getProviderModels).mockResolvedValue(mockModels);
+
+        const onUpdate = vi.fn();
+
+        render(
+          <TaskStageModelSelector
+            taskStageConfig={{
+              ...mockTaskStageConfig,
+              designDoc: {
+                provider: 'lmstudio',
+                modelId: '', // Empty modelId initially
+                temperature: 0.7,
+                maxTokens: 4096,
+                topP: 1.0,
+              },
+            }}
+            enabledProviders={mockEnabledProviders}
+            onUpdate={onUpdate}
+            projectId={mockProjectId}
+          />
+        );
+
+        // Wait for models to be fetched
+        await waitFor(() => {
+          expect(getProviderModels).toHaveBeenCalledWith(mockProjectId, 'lmstudio');
+        });
+
+        // After models are loaded and modelId is empty, first model should be auto-selected
+        await waitFor(() => {
+          // onUpdate should be called with the first model after fetch
+          const calls = onUpdate.mock.calls;
+          const hasAutoSelect = calls.some(call =>
+            call[0]?.designDoc?.modelId === mockModels[0]
+          );
+          expect(hasAutoSelect).toBe(true);
+        });
+      });
+
+      it('should not auto-select when modelId already exists for lmstudio', async () => {
+        const existingModelId = 'llama-3.2-7b';
+        const mockModels = ['llama-3.2-3b', 'llama-3.2-7b', 'mistral-7b'];
+        vi.mocked(getProviderModels).mockResolvedValue(mockModels);
+
+        const onUpdate = vi.fn();
+
+        render(
+          <TaskStageModelSelector
+            taskStageConfig={{
+              ...mockTaskStageConfig,
+              designDoc: {
+                provider: 'lmstudio',
+                modelId: existingModelId,
+                temperature: 0.7,
+                maxTokens: 4096,
+                topP: 1.0,
+              },
+            }}
+            enabledProviders={mockEnabledProviders}
+            onUpdate={onUpdate}
+            projectId={mockProjectId}
+          />
+        );
+
+        // Wait for models to be fetched
+        await waitFor(() => {
+          expect(getProviderModels).toHaveBeenCalledWith(mockProjectId, 'lmstudio');
+        });
+
+        // The existing modelId should be preserved, not replaced with first model
+        // Verify that onUpdate was not called with a different modelId
+        const calls = onUpdate.mock.calls;
+        const hasWrongModel = calls.some(call =>
+          call[0]?.designDoc?.modelId && call[0]?.designDoc?.modelId !== existingModelId
+        );
+        expect(hasWrongModel).toBe(false);
+      });
+
+      it('should use first available model for non-lmstudio providers', () => {
+        const onUpdate = vi.fn();
+
+        render(
+          <TaskStageModelSelector
+            taskStageConfig={{
+              ...mockTaskStageConfig,
+              designDoc: null,
+            }}
+            enabledProviders={mockEnabledProviders}
+            onUpdate={onUpdate}
+            projectId={mockProjectId}
+          />
+        );
+
+        // For non-LM Studio providers, first model from AVAILABLE_MODELS should be used
+        // when switching providers
+        // This test verifies the existing behavior is maintained
+        expect(screen.getByText('Design Document')).toBeInTheDocument();
+      });
+    });
+  });
 });

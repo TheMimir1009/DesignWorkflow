@@ -4,12 +4,15 @@
  */
 import fs from 'fs/promises';
 import path from 'path';
-<<<<<<< HEAD
-import type { Task, TaskStatus, CreateTaskDto } from '../../src/types/index.ts';
-=======
-import type { Task, TaskStatus, CreateTaskDto, GenerationHistoryEntry, GenerationDocumentType, GenerationAction } from '../../src/types/index.ts';
+import type {
+  Task,
+  TaskStatus,
+  CreateTaskDto,
+  GenerationHistoryEntry,
+  GenerationDocumentType,
+  GenerationAction,
+} from '../../src/types/index.ts';
 import type { LLMProvider } from '../../src/types/llm.ts';
->>>>>>> main
 import { v4 as uuidv4 } from 'uuid';
 import { WORKSPACE_PATH } from './projectStorage.ts';
 
@@ -135,10 +138,7 @@ export async function createTask(data: CreateTaskDto): Promise<Task> {
     references: data.references || [],
     qaAnswers: [],
     revisions: [],
-<<<<<<< HEAD
-=======
     generationHistory: [], // SPEC-MODELHISTORY-001: Initialize empty history
->>>>>>> main
     isArchived: false,
     createdAt: now,
     updatedAt: now,
@@ -152,8 +152,6 @@ export async function createTask(data: CreateTaskDto): Promise<Task> {
 }
 
 /**
-<<<<<<< HEAD
-=======
  * Input for adding a generation history entry
  */
 export interface AddGenerationHistoryInput {
@@ -225,7 +223,6 @@ export async function addGenerationHistoryEntry(
 }
 
 /**
->>>>>>> main
  * Delete a task
  * @param taskId - Task ID to delete
  * @returns true if deleted, false if not found

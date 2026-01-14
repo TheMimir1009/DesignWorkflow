@@ -38,13 +38,33 @@ Game design pipeline visualization and AI-powered document generation workflow s
   - TaskStageModelSelector 및 ColumnLLMSettingsModal 수정
   - 23/23 테스트 통과
   - 관련 SPEC: SPEC-LLM-002, SPEC-LLM-003
-- **칸반 컬럼별 LLM 설정 표시 기능 (SPEC-LLM-005)**
-  - 컬럼 헤더에 현재 LLM 모델 정보 표시
-  - 컬럼별 설정과 프로젝트 기본값 시각적 구분
-  - ModelBadge 컴포넌트와 프로바이더 아이콘 제공
-  - 클릭 시 ColumnLLMSettingsModal 오픈
-  - 19/19 테스트 통과, 100% 커버리지
-  - 관련 SPEC: SPEC-LLM-001, SPEC-LLM-004
+- **Prompt Manager System (SPEC-PROMPT-001)**
+  - 프롬프트 템플릿 관리 UI (PromptManagerPage, PromptList, PromptCard)
+  - 프롬프트 편집기 (CodeMirror 6 기반 PromptEditor)
+  - 변수 관리 패널 (PromptVariablePanel)
+  - 버전 히스토리 시스템 (PromptVersionHistory)
+  - 프롬프트 저장소 (promptStorage.ts, promptSeed.ts)
+  - Zustand 상태 관리 (promptStore.ts)
+  - RESTful API 엔드포인트 (/api/prompts/*)
+  - 150+ 테스트 통과
+  - 관련 SPEC: SPEC-QA-001, SPEC-DOCUMENT-001, SPEC-CLAUDE-001
+
+### Completed Features (continued)
+
+- **Passthrough Automatic Pipeline (SPEC-PASSTHROUGH-001)**
+  - Q&A 완료 후 Design Doc -> PRD -> Prototype 자동 생성
+  - 파이프라인 제어: 시작, 일시정지, 재개, 취소, 재시도
+  - 실시간 진행률 표시 및 단계별 상태 관리
+  - 브라우저 새로고침 후 상태 복구 지원
+  - LLM 설정 연동 (mashup 모드 포함)
+  - 구현 파일:
+    - server/routes/passthrough.ts (API 라우트)
+    - server/utils/passthroughRunner.ts (파이프라인 실행 엔진)
+    - server/utils/passthroughStorage.ts (상태 지속성)
+    - src/services/passthroughService.ts (API 서비스)
+    - src/store/passthroughStore.ts (상태 관리)
+    - src/types/passthrough.ts (타입 정의)
+    - src/components/passthrough/ (UI 컴포넌트)
 
 ### In Progress Features
 
@@ -96,6 +116,7 @@ src/
     task/        - Task card and modal
     document/    - Document viewer and editor
     archive/     - Archive view components
+    prompt/      - Prompt template management components
     common/      - Shared UI components (Button, Modal, etc.)
   services/      - API client, file operations
   prompts/       - AI prompt templates

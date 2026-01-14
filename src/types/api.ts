@@ -22,6 +22,10 @@ export interface ErrorDetails {
   guidance?: string;
   /** URL to help documentation */
   helpUrl?: string;
+  /** Current status when error occurred (for pipeline-related errors) */
+  currentStatus?: string;
+  /** Operation being performed when error occurred (SPEC-PASSTHROUGH-001) */
+  operation?: string;
 }
 
 /**
@@ -59,6 +63,7 @@ export type ApiResult<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 /**
  * Error code constants
  * SPEC-DEBUG-005: Standardized error codes for consistent error handling
+ * SPEC-PASSTHROUGH-001: Added passthrough-specific error codes
  */
 export const ErrorCode = {
   /** Task with specified ID not found (404) */
@@ -79,6 +84,18 @@ export const ErrorCode = {
   LLM_GENERATION_FAILED: 'LLM_GENERATION_FAILED',
   /** AI generation timed out (504) */
   AI_GENERATION_TIMEOUT: 'AI_GENERATION_TIMEOUT',
+  /** SPEC-PASSTHROUGH-001: Pipeline not found (404) */
+  PIPELINE_NOT_FOUND: 'PIPELINE_NOT_FOUND',
+  /** SPEC-PASSTHROUGH-001: Invalid pipeline status (400) */
+  INVALID_PIPELINE_STATUS: 'INVALID_PIPELINE_STATUS',
+  /** SPEC-PASSTHROUGH-001: Pipeline already running (409) */
+  PIPELINE_ALREADY_RUNNING: 'PIPELINE_ALREADY_RUNNING',
+  /** SPEC-PASSTHROUGH-001: Q&A not completed (400) */
+  QA_NOT_COMPLETED: 'QA_NOT_COMPLETED',
+  /** SPEC-PASSTHROUGH-001: Invalid pipeline stage (400) */
+  INVALID_PIPELINE_STAGE: 'INVALID_PIPELINE_STAGE',
+  /** SPEC-PASSTHROUGH-001: Pipeline operation not allowed (405) */
+  OPERATION_NOT_ALLOWED: 'OPERATION_NOT_ALLOWED',
 } as const;
 
 /**
@@ -89,6 +106,7 @@ export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
 /**
  * HTTP status code mappings for error codes
  * SPEC-DEBUG-005: REQ-ERR-002 - Appropriate HTTP status codes for each error type
+ * SPEC-PASSTHROUGH-001: Added passthrough-specific error code mappings
  */
 export const ErrorStatusCode: Record<ErrorCodeType, number> = {
   TASK_NOT_FOUND: 404,
@@ -100,6 +118,12 @@ export const ErrorStatusCode: Record<ErrorCodeType, number> = {
   LLM_CONFIG_MISSING: 400,
   LLM_GENERATION_FAILED: 500,
   AI_GENERATION_TIMEOUT: 504,
+  PIPELINE_NOT_FOUND: 404,
+  INVALID_PIPELINE_STATUS: 400,
+  PIPELINE_ALREADY_RUNNING: 409,
+  QA_NOT_COMPLETED: 400,
+  INVALID_PIPELINE_STAGE: 400,
+  OPERATION_NOT_ALLOWED: 405,
 };
 
 /**

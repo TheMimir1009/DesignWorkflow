@@ -46,6 +46,11 @@ export interface Task {
   prototype: string | null;
   references: string[];
   qaAnswers: QAAnswer[];
+  /** Q&A session state for the task (SPEC-PASSTHROUGH-001) */
+  qaSession?: {
+    id: string;
+    isCompleted: boolean;
+  } | null;
   revisions: Revision[];
   /** AI model usage history for document generations (SPEC-MODELHISTORY-001) */
   generationHistory?: GenerationHistoryEntry[];
@@ -524,6 +529,18 @@ export interface CompletedDocumentsQueryOptions {
 export * from './llm';
 
 // =============================================================================
+// Passthrough Pipeline Types (SPEC-PASSTHROUGH-001)
+// =============================================================================
+
+export * from './passthrough';
+
+// =============================================================================
+// API Response Types (SPEC-DEBUG-005)
+// =============================================================================
+
+export type { ApiResult } from './api';
+
+// =============================================================================
 // Generation History Types (SPEC-MODELHISTORY-001)
 // =============================================================================
 
@@ -562,6 +579,92 @@ export interface GenerationHistoryEntry {
   };
   /** User feedback for modification requests */
   feedback?: string;
+}
+
+// =============================================================================
+// Prompt Template Management Types (SPEC-PROMPT-001)
+// =============================================================================
+
+/**
+ * Prompt template category
+ */
+export type PromptCategory = 'document-generation' | 'code-operation' | 'analysis' | 'utility';
+
+/**
+ * Prompt variable type for dynamic content substitution
+ */
+export type PromptVariableType = 'string' | 'array' | 'object';
+
+/**
+ * Prompt variable definition for template variables
+ */
+export interface PromptVariable {
+  name: string;
+  type: PromptVariableType;
+  description: string;
+  required: boolean;
+  example: string;
+}
+
+/**
+ * Prompt template for managing reusable prompts
+ */
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  category: PromptCategory;
+  description: string;
+  content: string;
+  variables: PromptVariable[];
+  isModified: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  defaultContent: string;
+}
+
+/**
+ * Prompt version for version history
+ */
+export interface PromptVersion {
+  id: string;
+  promptId: string;
+  version: number;
+  content: string;
+  createdAt: string;
+}
+
+/**
+ * Create prompt template DTO
+ */
+export interface CreatePromptTemplateDto {
+  name: string;
+  category: PromptCategory;
+  description: string;
+  content: string;
+  variables: PromptVariable[];
+}
+
+/**
+ * Update prompt template DTO
+ */
+export interface UpdatePromptTemplateDto {
+  name?: string;
+  category?: PromptCategory;
+  description?: string;
+  content?: string;
+  variables?: PromptVariable[];
+}
+
+/**
+ * Prompt Store State for Zustand
+ */
+export interface PromptTemplateState {
+  prompts: PromptTemplate[];
+  selectedPromptId: string | null;
+  selectedCategory: PromptCategory | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 // =============================================================================

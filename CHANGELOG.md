@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SPEC-PASSTHROUGH-001: Passthrough Automatic Pipeline**
+  - Q&A 완료 후 Design Doc -> PRD -> Prototype 자동 생성 파이프라인
+  - 파이프라인 제어 API: 시작, 일시정지, 재개, 취소, 상태 조회, 재시도
+  - 실시간 진행률 표시 및 단계별 상태 관리
+  - 상태 지속성: 브라우저 새로고침 후 파이프라인 상태 복구
+  - LLM 연동: SPEC-LLM-001 설정 활용 (mashup 모드 지원)
+  - 에러 처리 및 재시도 로직 (최대 3회 재시도)
+  - 구현 파일:
+    - `server/routes/passthrough.ts` - API 라우트 (6개 엔드포인트)
+    - `server/utils/passthroughRunner.ts` - 파이프라인 실행 엔진
+    - `server/utils/passthroughStorage.ts` - 상태 지속성 관리
+    - `src/services/passthroughService.ts` - 클라이언트 API 서비스
+    - `src/store/passthroughStore.ts` - Zustand 상태 관리
+    - `src/types/passthrough.ts` - 타입 정의 및 유효성 검사
+    - `src/components/passthrough/` - UI 컴포넌트 (PassthroughPanel, PassthroughProgress, PassthroughStageCard, PassthroughControls)
+
+### Changed
+- README.md: Passthrough 기능 설명 추가
+- 문서: API 및 아키텍처 문서 업데이트
+
+### Added (previous)
 - SPEC-DOCEDIT-002: Circular dependency fix for document components
   - Created shared `types.ts` file with `SaveStatus` type
   - Updated `EnhancedDocumentEditor.tsx` to import from `types.ts`
