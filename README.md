@@ -4,7 +4,7 @@ Game design pipeline visualization and AI-powered document generation workflow s
 
 ## Project Progress
 
-**Current Progress: 100%** (19 features completed)
+**Current Progress: 100%** (20 features completed)
 
 ### Completed Features
 
@@ -38,6 +38,16 @@ Game design pipeline visualization and AI-powered document generation workflow s
   - TaskStageModelSelector 및 ColumnLLMSettingsModal 수정
   - 23/23 테스트 통과
   - 관련 SPEC: SPEC-LLM-002, SPEC-LLM-003
+- **Prompt Manager System (SPEC-PROMPT-001)**
+  - 프롬프트 템플릿 관리 UI (PromptManagerPage, PromptList, PromptCard)
+  - 프롬프트 편집기 (CodeMirror 6 기반 PromptEditor)
+  - 변수 관리 패널 (PromptVariablePanel)
+  - 버전 히스토리 시스템 (PromptVersionHistory)
+  - 프롬프트 저장소 (promptStorage.ts, promptSeed.ts)
+  - Zustand 상태 관리 (promptStore.ts)
+  - RESTful API 엔드포인트 (/api/prompts/*)
+  - 150+ 테스트 통과
+  - 관련 SPEC: SPEC-QA-001, SPEC-DOCUMENT-001, SPEC-CLAUDE-001
 
 ### In Progress Features
 
@@ -89,6 +99,7 @@ src/
     task/        - Task card and modal
     document/    - Document viewer and editor
     archive/     - Archive view components
+    prompt/      - Prompt template management components
     common/      - Shared UI components (Button, Modal, etc.)
   services/      - API client, file operations
   prompts/       - AI prompt templates
