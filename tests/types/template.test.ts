@@ -1,29 +1,15 @@
 /**
  * Template Type Definitions Tests
  * TDD test suite for template-related type definitions
-<<<<<<< HEAD
-=======
  * SPEC-TEMPLATE-001: Template System Types
->>>>>>> main
  */
 import { describe, it, expect } from 'vitest';
 import type {
   Template,
   TemplateVariable,
-<<<<<<< HEAD
   TemplateCategory,
   CreateTemplateDto,
   UpdateTemplateDto,
-=======
-  TemplateVariableType,
-  TemplateCategory,
-  TemplateState,
-  CreateTemplateDto,
-  UpdateTemplateDto,
-  TemplateApplicationContext,
-  ApplyTemplateRequest,
-  ApplyTemplateResponse,
->>>>>>> main
 } from '../../src/types/index.ts';
 
 describe('Template Type Definitions', () => {
@@ -39,23 +25,6 @@ describe('Template Type Definitions', () => {
     });
   });
 
-<<<<<<< HEAD
-=======
-  describe('TemplateVariableType', () => {
-    it('should accept valid variable type values', () => {
-      const textType: TemplateVariableType = 'text';
-      const textareaType: TemplateVariableType = 'textarea';
-      const selectType: TemplateVariableType = 'select';
-      const numberType: TemplateVariableType = 'number';
-
-      expect(textType).toBe('text');
-      expect(textareaType).toBe('textarea');
-      expect(selectType).toBe('select');
-      expect(numberType).toBe('number');
-    });
-  });
-
->>>>>>> main
   describe('TemplateVariable', () => {
     it('should define required variable properties', () => {
       const variable: TemplateVariable = {
@@ -244,124 +213,4 @@ describe('Template Type Definitions', () => {
       expect(dto.variables).toEqual([]);
     });
   });
-<<<<<<< HEAD
-=======
-
-  describe('TemplateState', () => {
-    it('should define store state structure', () => {
-      const state: TemplateState = {
-        templates: [],
-        selectedTemplateId: null,
-        selectedCategory: null,
-        isLoading: false,
-        error: null,
-      };
-
-      expect(state.templates).toEqual([]);
-      expect(state.selectedTemplateId).toBeNull();
-      expect(state.selectedCategory).toBeNull();
-      expect(state.isLoading).toBe(false);
-      expect(state.error).toBeNull();
-    });
-
-    it('should allow templates and selected state', () => {
-      const mockTemplate: Template = {
-        id: 'template-001',
-        name: 'Test Template',
-        category: 'qa-questions',
-        description: 'Test description',
-        content: 'Test content',
-        variables: [],
-        isDefault: false,
-        projectId: null,
-        createdAt: '2024-01-01T00:00:00.000Z',
-        updatedAt: '2024-01-01T00:00:00.000Z',
-      };
-
-      const state: TemplateState = {
-        templates: [mockTemplate],
-        selectedTemplateId: 'template-001',
-        selectedCategory: 'qa-questions',
-        isLoading: true,
-        error: 'Some error',
-      };
-
-      expect(state.templates).toHaveLength(1);
-      expect(state.selectedTemplateId).toBe('template-001');
-      expect(state.selectedCategory).toBe('qa-questions');
-      expect(state.isLoading).toBe(true);
-      expect(state.error).toBe('Some error');
-    });
-  });
-
-  describe('TemplateApplicationContext', () => {
-    it('should define template application context', () => {
-      const context: TemplateApplicationContext = {
-        templateId: 'template-001',
-        variableValues: {
-          project_name: 'My Project',
-          description: 'Project description',
-        },
-        targetType: 'qa-form',
-      };
-
-      expect(context.templateId).toBe('template-001');
-      expect(context.variableValues).toHaveProperty('project_name');
-      expect(context.targetType).toBe('qa-form');
-    });
-
-    it('should support all target types', () => {
-      const qaContext: TemplateApplicationContext = {
-        templateId: 'template-001',
-        variableValues: {},
-        targetType: 'qa-form',
-      };
-
-      const docContext: TemplateApplicationContext = {
-        templateId: 'template-002',
-        variableValues: {},
-        targetType: 'document',
-      };
-
-      const promptContext: TemplateApplicationContext = {
-        templateId: 'template-003',
-        variableValues: {},
-        targetType: 'prompt',
-      };
-
-      expect(qaContext.targetType).toBe('qa-form');
-      expect(docContext.targetType).toBe('document');
-      expect(promptContext.targetType).toBe('prompt');
-    });
-  });
-
-  describe('ApplyTemplateRequest', () => {
-    it('should define request structure for applying template', () => {
-      const request: ApplyTemplateRequest = {
-        variableValues: {
-          title: 'My Title',
-          content: 'My Content',
-        },
-      };
-
-      expect(request.variableValues).toHaveProperty('title');
-      expect(request.variableValues).toHaveProperty('content');
-    });
-  });
-
-  describe('ApplyTemplateResponse', () => {
-    it('should define response structure for applied template', () => {
-      const response: ApplyTemplateResponse = {
-        content: 'Applied template content with variables replaced',
-        appliedVariables: {
-          title: 'My Title',
-          content: 'My Content',
-        },
-      };
-
-      expect(response.content).toContain('Applied template content');
-      expect(response.appliedVariables).toHaveProperty('title');
-    });
-  });
->>>>>>> main
 });

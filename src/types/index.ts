@@ -46,6 +46,11 @@ export interface Task {
   prototype: string | null;
   references: string[];
   qaAnswers: QAAnswer[];
+  /** Q&A session state for the task (SPEC-PASSTHROUGH-001) */
+  qaSession?: {
+    id: string;
+    isCompleted: boolean;
+  } | null;
   revisions: Revision[];
   /** AI model usage history for document generations (SPEC-MODELHISTORY-001) */
   generationHistory?: GenerationHistoryEntry[];
@@ -522,6 +527,18 @@ export interface CompletedDocumentsQueryOptions {
 // =============================================================================
 
 export * from './llm';
+
+// =============================================================================
+// Passthrough Pipeline Types (SPEC-PASSTHROUGH-001)
+// =============================================================================
+
+export * from './passthrough';
+
+// =============================================================================
+// API Response Types (SPEC-DEBUG-005)
+// =============================================================================
+
+export type { ApiResult } from './api';
 
 // =============================================================================
 // Generation History Types (SPEC-MODELHISTORY-001)

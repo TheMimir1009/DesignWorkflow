@@ -153,10 +153,10 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     testProjectId = await createTestProject();
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // REQ-001: GET /api/projects/:projectId/completed-documents
   // Return prototype status tasks and archived tasks with metadata
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('REQ-001: GET /api/projects/:projectId/completed-documents', () => {
     it('should return empty array when no completed documents exist', async () => {
       const response = await request(app)
@@ -355,10 +355,10 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     });
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // REQ-002: Keyword search via ?search=keyword
   // Case-insensitive search in title, featureList, designDocument
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('REQ-002: Keyword search via ?search=keyword', () => {
     it('should search in task title (case-insensitive)', async () => {
       await createPrototypeTask(testProjectId, { title: 'Login System Feature' });
@@ -461,10 +461,10 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     });
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // REQ-003: Document type filtering via ?documentType=design,prd,prototype
   // Filter by hasDesignDoc, hasPrd, hasPrototype
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('REQ-003: Document type filtering via ?documentType', () => {
     it('should filter by hasDesignDoc=true', async () => {
       await createPrototypeTask(testProjectId, {
@@ -602,10 +602,10 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     });
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // REQ-004: Reference filtering via ?reference=systemId
   // Filter by references array
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('REQ-004: Reference filtering via ?reference=systemId', () => {
     it('should filter by single reference', async () => {
       await createPrototypeTask(testProjectId, {
@@ -702,9 +702,9 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     });
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // Combined Filters
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('Combined Filters', () => {
     it('should combine search and documentType filters', async () => {
       await createPrototypeTask(testProjectId, {
@@ -797,10 +797,10 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     });
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // REQ-005: GET /api/projects/:projectId/completed-documents/:taskId
   // Return full document details
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('REQ-005: GET /api/projects/:projectId/completed-documents/:taskId', () => {
     it('should return full details for a prototype task', async () => {
       const qaAnswers = [
@@ -937,9 +937,9 @@ describe('Completed Documents API (SPEC-DOCREF-001)', () => {
     });
   });
 
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   // Pagination Support
-  // ==========================================================================
+  // -------------------------------------------------------------------------
   describe('Pagination Support', () => {
     it('should support limit parameter', async () => {
       // Create 5 prototype tasks
