@@ -216,3 +216,115 @@ export function buildAIGenerationTimeoutError(): ApiErrorResponse {
     }
   );
 }
+
+/**
+ * SPEC-PASSTHROUGH-001: Pipeline error builders
+ */
+
+/**
+ * Build PIPELINE_NOT_FOUND error
+ * SPEC-PASSTHROUGH-001: Error when pipeline does not exist
+ *
+ * @param taskId - The task ID for which pipeline was not found
+ * @returns Formatted error response
+ */
+export function buildPipelineNotFoundError(taskId: string): ApiErrorResponse {
+  return buildErrorResponse('Pipeline not found', ErrorCode.PIPELINE_NOT_FOUND, {
+    field: 'taskId',
+    value: taskId,
+    guidance: 'No passthrough pipeline found for this task. Start a new pipeline.',
+  });
+}
+
+/**
+ * Build INVALID_PIPELINE_STATUS error
+ * SPEC-PASSTHROUGH-001: Error when pipeline status is invalid
+ *
+ * @param status - The invalid status value
+ * @returns Formatted error response
+ */
+export function buildInvalidPipelineStatusError(status: string): ApiErrorResponse {
+  return buildErrorResponse(
+    `Invalid pipeline status: ${status}`,
+    ErrorCode.INVALID_PIPELINE_STATUS,
+    {
+      value: status,
+      guidance: 'Valid statuses are: idle, running, paused, completed, failed, cancelled',
+    }
+  );
+}
+
+/**
+ * Build PIPELINE_ALREADY_RUNNING error
+ * SPEC-PASSTHROUGH-001: Error when trying to start a pipeline that is already running
+ *
+ * @returns Formatted error response
+ */
+export function buildPipelineAlreadyRunningError(): ApiErrorResponse {
+  return buildErrorResponse(
+    'Pipeline is already running',
+    ErrorCode.PIPELINE_ALREADY_RUNNING,
+    {
+      guidance: 'A pipeline is already in progress. Pause or cancel it before starting a new one.',
+    }
+  );
+}
+
+/**
+ * Build QA_NOT_COMPLETED error
+ * SPEC-PASSTHROUGH-001: Error when trying to start passthrough before Q&A is completed
+ *
+ * @returns Formatted error response
+ */
+export function buildQANotCompletedError(): ApiErrorResponse {
+  return buildErrorResponse(
+    'Q&A session must be completed before starting passthrough',
+    ErrorCode.QA_NOT_COMPLETED,
+    {
+      field: 'qaStatus',
+      action: 'complete_qa',
+      guidance: 'Complete the Q&A session first before starting the automatic document generation pipeline.',
+    }
+  );
+}
+
+/**
+ * Build INVALID_PIPELINE_STAGE error
+ * SPEC-PASSTHROUGH-001: Error when pipeline stage is invalid
+ *
+ * @param stage - The invalid stage value
+ * @returns Formatted error response
+ */
+export function buildInvalidPipelineStageError(stage: string): ApiErrorResponse {
+  return buildErrorResponse(
+    `Invalid pipeline stage: ${stage}`,
+    ErrorCode.INVALID_PIPELINE_STAGE,
+    {
+      value: stage,
+      guidance: 'Valid stages are: design_doc, prd, prototype',
+    }
+  );
+}
+
+/**
+ * Build OPERATION_NOT_ALLOWED error
+ * SPEC-PASSTHROUGH-001: Error when operation is not allowed for current pipeline state
+ *
+ * @param operation - The operation that was attempted
+ * @param currentStatus - The current pipeline status
+ * @returns Formatted error response
+ */
+export function buildOperationNotAllowedError(
+  operation: string,
+  currentStatus: string
+): ApiErrorResponse {
+  return buildErrorResponse(
+    `Operation '${operation}' is not allowed when pipeline status is '${currentStatus}'`,
+    ErrorCode.OPERATION_NOT_ALLOWED,
+    {
+      currentStatus,
+      operation,
+      guidance: 'Check the pipeline status and try a valid operation for this state.',
+    }
+  );
+}

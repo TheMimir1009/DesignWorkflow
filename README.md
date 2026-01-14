@@ -49,6 +49,23 @@ Game design pipeline visualization and AI-powered document generation workflow s
   - 150+ 테스트 통과
   - 관련 SPEC: SPEC-QA-001, SPEC-DOCUMENT-001, SPEC-CLAUDE-001
 
+### Completed Features (continued)
+
+- **Passthrough Automatic Pipeline (SPEC-PASSTHROUGH-001)**
+  - Q&A 완료 후 Design Doc -> PRD -> Prototype 자동 생성
+  - 파이프라인 제어: 시작, 일시정지, 재개, 취소, 재시도
+  - 실시간 진행률 표시 및 단계별 상태 관리
+  - 브라우저 새로고침 후 상태 복구 지원
+  - LLM 설정 연동 (mashup 모드 포함)
+  - 구현 파일:
+    - server/routes/passthrough.ts (API 라우트)
+    - server/utils/passthroughRunner.ts (파이프라인 실행 엔진)
+    - server/utils/passthroughStorage.ts (상태 지속성)
+    - src/services/passthroughService.ts (API 서비스)
+    - src/store/passthroughStore.ts (상태 관리)
+    - src/types/passthrough.ts (타입 정의)
+    - src/components/passthrough/ (UI 컴포넌트)
+
 ### In Progress Features
 
 - Document Editing Enhancement (SPEC-DOCEDIT-001)

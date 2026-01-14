@@ -19,18 +19,9 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { useTaskStore } from '../../store/taskStore';
-<<<<<<< HEAD
 import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
 import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
 import type { Task, TaskStatus } from '../../types';
-=======
-import { useArchiveStore } from '../../store/archiveStore';
-import { KANBAN_COLUMNS, isForwardMovement } from '../../types/kanban';
-import { TaskCreateModal, TaskEditModal, TaskDeleteConfirm } from '../task';
-import { QAFormModal, DocumentViewerModal } from '../document';
-import type { Task, TaskStatus } from '../../types';
-import type { QACategory } from '../../types/qa';
->>>>>>> main
 
 /**
  * Props for KanbanBoard component
@@ -83,8 +74,6 @@ function ErrorDisplay({ message }: { message: string }) {
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
-<<<<<<< HEAD
-=======
   // Q&A Modal state
   const [isQAModalOpen, setIsQAModalOpen] = useState(false);
   const [qaTaskId, setQATaskId] = useState<string | null>(null);
@@ -94,7 +83,6 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
->>>>>>> main
   // Store selectors
   const tasks = useTaskStore((state) => state.tasks);
   const generatingTasks = useTaskStore((state) => state.generatingTasks);
@@ -104,21 +92,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const updateTaskStatus = useTaskStore((state) => state.updateTaskStatus);
   const triggerAIGeneration = useTaskStore((state) => state.triggerAIGeneration);
 
-<<<<<<< HEAD
-=======
-  // Archive store
-  const archiveTask = useArchiveStore((state) => state.archiveTask);
-
->>>>>>> main
   // Modal state selectors
   const isCreateModalOpen = useTaskStore((state) => state.isCreateModalOpen);
   const isEditModalOpen = useTaskStore((state) => state.isEditModalOpen);
   const isDeleteConfirmOpen = useTaskStore((state) => state.isDeleteConfirmOpen);
   const selectedTask = useTaskStore((state) => state.selectedTask);
-<<<<<<< HEAD
-=======
-  const openCreateModal = useTaskStore((state) => state.openCreateModal);
->>>>>>> main
   const closeCreateModal = useTaskStore((state) => state.closeCreateModal);
   const closeEditModal = useTaskStore((state) => state.closeEditModal);
   const closeDeleteConfirm = useTaskStore((state) => state.closeDeleteConfirm);
@@ -167,51 +145,6 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     [tasks]
   );
 
-<<<<<<< HEAD
-=======
-  // Open Q&A modal for a task moving to design
-  const openQAModal = useCallback((taskId: string, category: QACategory = 'game_mechanic') => {
-    setQATaskId(taskId);
-    setQACategory(category);
-    setIsQAModalOpen(true);
-  }, []);
-
-  // Close Q&A modal
-  const closeQAModal = useCallback(() => {
-    setIsQAModalOpen(false);
-    setQATaskId(null);
-  }, []);
-
-  // Open Document Viewer modal
-  const openDocViewer = useCallback((task: Task) => {
-    setViewingTask(task);
-    setIsDocViewerOpen(true);
-  }, []);
-
-  // Close Document Viewer modal
-  const closeDocViewer = useCallback(() => {
-    setIsDocViewerOpen(false);
-    setViewingTask(null);
-  }, []);
-
-  // Handle archive task
-  const handleArchive = useCallback(
-    async (taskId: string) => {
-      await archiveTask(projectId, taskId);
-      // Refresh tasks after archiving
-      fetchTasks(projectId);
-    },
-    [archiveTask, projectId, fetchTasks]
-  );
-
-  // Handle Q&A completion
-  const handleQAComplete = useCallback(() => {
-    // Refresh tasks after Q&A completion
-    fetchTasks(projectId);
-    closeQAModal();
-  }, [fetchTasks, projectId, closeQAModal]);
-
->>>>>>> main
   // Handle drag end
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -225,47 +158,11 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       if (!task) return;
 
       // Determine target status from drop zone
-<<<<<<< HEAD
       const targetStatus = over.id as TaskStatus;
-=======
-      // Check if over.id is a valid column status, otherwise get it from sortable data
-      const validStatuses: TaskStatus[] = ['featurelist', 'design', 'prd', 'prototype'];
-      let targetStatus: TaskStatus;
-
-      if (validStatuses.includes(over.id as TaskStatus)) {
-        // Dropped on a column
-        targetStatus = over.id as TaskStatus;
-      } else {
-        // Dropped on another task - get the column from sortable data
-        const overData = over.data?.current;
-        if (overData?.sortable?.containerId && validStatuses.includes(overData.sortable.containerId as TaskStatus)) {
-          targetStatus = overData.sortable.containerId as TaskStatus;
-        } else {
-          // Fallback: find the task and get its status
-          const overTask = tasks.find((t) => t.id === over.id);
-          if (overTask) {
-            targetStatus = overTask.status;
-          } else {
-            // Cannot determine target, abort
-            return;
-          }
-        }
-      }
->>>>>>> main
 
       // Skip if same status
       if (task.status === targetStatus) return;
 
-<<<<<<< HEAD
-=======
-      // Check if it's a forward movement from featurelist to design
-      // This triggers the Q&A flow instead of direct AI generation
-      if (task.status === 'featurelist' && targetStatus === 'design') {
-        openQAModal(taskId);
-        return;
-      }
-
->>>>>>> main
       // Check if it's a forward movement (triggers AI)
       const isForward = isForwardMovement(task.status, targetStatus);
 
@@ -277,11 +174,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         await updateTaskStatus(taskId, targetStatus);
       }
     },
-<<<<<<< HEAD
     [tasks, updateTaskStatus, triggerAIGeneration]
-=======
-    [tasks, updateTaskStatus, triggerAIGeneration, openQAModal]
->>>>>>> main
   );
 
   // Handle delete confirmation
@@ -303,23 +196,6 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
 
   return (
     <div data-testid="kanban-board" className="p-4">
-<<<<<<< HEAD
-=======
-      {/* Header with New Task Button */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-gray-100">Kanban Board</h1>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Task
-        </button>
-      </div>
-
->>>>>>> main
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -333,12 +209,6 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
               column={column}
               tasks={getTasksByStatus(column.id)}
               generatingTasks={generatingTasks}
-<<<<<<< HEAD
-=======
-              projectId={projectId}
-              onViewDocuments={openDocViewer}
-              onArchive={handleArchive}
->>>>>>> main
             />
           ))}
         </div>
@@ -375,29 +245,6 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           onConfirm={handleDeleteConfirm}
         />
       )}
-<<<<<<< HEAD
-=======
-
-      {/* Q&A Form Modal */}
-      {qaTaskId && (
-        <QAFormModal
-          isOpen={isQAModalOpen}
-          onClose={closeQAModal}
-          taskId={qaTaskId}
-          onComplete={handleQAComplete}
-          initialCategory={qaCategory}
-        />
-      )}
-
-      {/* Document Viewer Modal */}
-      {viewingTask && (
-        <DocumentViewerModal
-          isOpen={isDocViewerOpen}
-          onClose={closeDocViewer}
-          task={viewingTask}
-        />
-      )}
->>>>>>> main
     </div>
   );
 }

@@ -1,32 +1,13 @@
 /**
  * Tasks API Routes
  * Handles all task-related endpoints
-<<<<<<< HEAD
-=======
  *
  * SPEC-DEBUG-004: Added LLM provider selection support
  * SPEC-DEBUG-005: Standardized error handling and response formats
->>>>>>> main
  */
 import { Router, type Request, type Response } from 'express';
 import type { TaskStatus } from '../../src/types/index.ts';
 import { sendSuccess, sendError } from '../utils/response.ts';
-<<<<<<< HEAD
-=======
-import {
-  sendApiSuccess,
-  sendApiError,
-  sendApiErrorFromBuilder,
-} from '../utils/apiResponse.ts';
-import {
-  buildTaskNotFoundError,
-  buildMissingRequiredFieldError,
-  buildInvalidStatusError,
-  buildPrerequisiteMissingError,
-  buildLLMConfigMissingError,
-  buildLLMGenerationFailedError,
-} from '../utils/errorBuilder.ts';
->>>>>>> main
 import { getProjectById } from '../utils/projectStorage.ts';
 import {
   getTasksByProject,
@@ -35,131 +16,12 @@ import {
   createTask,
   deleteTask,
   isValidStatus,
-<<<<<<< HEAD
   generateMockAIContent,
 } from '../utils/taskStorage.ts';
-=======
-  addGenerationHistoryEntry,
-} from '../utils/taskStorage.ts';
-import { buildPRDPrompt, buildPrototypePrompt } from '../utils/promptBuilder.ts';
-import { callClaudeCode } from '../utils/claudeCodeRunner.ts';
-import { getLLMSettingsOrDefault } from '../utils/llmSettingsStorage.ts';
-import { createLLMProvider, type LLMProviderInterface } from '../utils/llmProvider.ts';
-import {
-  getModelConfigForStage,
-  isProviderConfigured,
-  type LLMModelConfig,
-  type TaskStage,
-  type LLMProvider,
-} from '../../src/types/llm.ts';
->>>>>>> main
 
 export const tasksRouter = Router();
 
 /**
-<<<<<<< HEAD
-=======
- * LLM Provider Selection Result
- * SPEC-DEBUG-004: Added to support project-specific LLM provider selection
- */
-interface LLMProviderSelection {
-  provider: LLMProviderInterface;
-  config: LLMModelConfig;
-  isDefault: boolean;
-}
-
-/**
- * Select LLM provider based on project settings and task stage
- * SPEC-DEBUG-004: Copied from generate.ts to support task AI generation with configured providers
- * SPEC-DEBUG-003: Always uses shared logger for debug console
- * Returns the appropriate provider based on project LLM settings
- */
-async function selectLLMProvider(
-  projectId: string | undefined,
-  stage: TaskStage
-): Promise<LLMProviderSelection> {
-  // If no projectId, use default Claude Code
-  if (!projectId) {
-    const settings = await getLLMSettingsOrDefault('default');
-    const config = settings.taskStageConfig.defaultModel;
-    return {
-      provider: createLLMProvider({
-        provider: 'claude-code',
-        apiKey: '',
-        isEnabled: true,
-        connectionStatus: 'connected',
-      }, true), // Enable shared logging
-      config,
-      isDefault: true,
-    };
-  }
-
-  // Get project-specific LLM settings
-  const settings = await getLLMSettingsOrDefault(projectId);
-  const modelConfig = getModelConfigForStage(settings, stage);
-
-  // Check if using default (Claude Code)
-  if (modelConfig.provider === 'claude-code') {
-    return {
-      provider: createLLMProvider({
-        provider: 'claude-code',
-        apiKey: '',
-        isEnabled: true,
-        connectionStatus: 'connected',
-      }, true), // Enable shared logging
-      config: modelConfig,
-      isDefault: true,
-    };
-  }
-
-  // Find the provider settings
-  const providerSettings = settings.providers.find(
-    (p) => p.provider === modelConfig.provider
-  );
-
-  if (!providerSettings) {
-    throw new Error(`Provider ${modelConfig.provider} not found in settings`);
-  }
-
-  // Check if provider is enabled
-  if (!providerSettings.isEnabled) {
-    throw new Error(`Provider ${modelConfig.provider} is not enabled. Please enable it in project settings.`);
-  }
-
-  // Check if provider is configured (has API key or valid endpoint)
-  const isConfigured = providerSettings.provider === 'lmstudio'
-    ? (providerSettings.endpoint !== undefined && providerSettings.endpoint.length > 0)
-    : (providerSettings.apiKey.length > 0);
-
-  if (!isConfigured) {
-    throw new Error(`Provider ${modelConfig.provider} is not configured. Please add API key or configure endpoint.`);
-  }
-
-  // Create and return the provider with shared logging
-  return {
-    provider: createLLMProvider(providerSettings, true), // Enable shared logging
-    config: modelConfig,
-    isDefault: false,
-  };
-}
-
-/**
- * Map TaskStatus to TaskStage for LLM provider selection
- * SPEC-DEBUG-004: Added for proper stage-based model selection
- */
-function mapStatusToStage(status: TaskStatus): TaskStage {
-  switch (status) {
-    case 'prd':
-      return 'prd';
-    case 'prototype':
-      return 'prototype';
-    default:
-      return 'defaultModel';
-  }
-}
-
-/**
->>>>>>> main
  * GET /api/projects/:projectId/tasks - Get all tasks for a project
  *
  * Path Parameters:
@@ -191,10 +53,6 @@ export async function getProjectTasks(req: Request, res: Response): Promise<void
 
 /**
  * PUT /api/tasks/:id/status - Update task status
-<<<<<<< HEAD
-=======
- * SPEC-DEBUG-005: Standardized error handling
->>>>>>> main
  *
  * Path Parameters:
  * - id: Task UUID
@@ -215,39 +73,26 @@ tasksRouter.put('/:id/status', async (req: Request, res: Response): Promise<void
 
     // Validate status is provided
     if (!status) {
-<<<<<<< HEAD
       sendError(res, 400, 'Status is required');
-=======
-      sendApiErrorFromBuilder(res, buildMissingRequiredFieldError('status'), 400);
->>>>>>> main
       return;
     }
 
     // Validate status value
     if (!isValidStatus(status)) {
-<<<<<<< HEAD
       sendError(res, 400, 'Invalid status. Must be one of: featurelist, design, prd, prototype');
-=======
-      sendApiErrorFromBuilder(res, buildInvalidStatusError(status), 400);
->>>>>>> main
       return;
     }
 
     // Check if task exists
     const taskResult = await getTaskById(id);
     if (!taskResult) {
-<<<<<<< HEAD
       sendError(res, 404, 'Task not found');
-=======
-      sendApiErrorFromBuilder(res, buildTaskNotFoundError(id), 404);
->>>>>>> main
       return;
     }
 
     // Update task
     const updatedTask = await updateTask(id, { status: status as TaskStatus });
     if (!updatedTask) {
-<<<<<<< HEAD
       sendError(res, 500, 'Failed to update task');
       return;
     }
@@ -256,25 +101,11 @@ tasksRouter.put('/:id/status', async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error('Error updating task status:', error);
     sendError(res, 500, 'Failed to update task status');
-=======
-      sendApiError(res, 500, 'Failed to update task');
-      return;
-    }
-
-    sendApiSuccess(res, updatedTask);
-  } catch (error) {
-    console.error('Error updating task status:', error);
-    sendApiError(res, 500, 'Failed to update task status');
->>>>>>> main
   }
 });
 
 /**
  * POST /api/tasks/:id/trigger-ai - Trigger AI generation for a task
-<<<<<<< HEAD
-=======
- * SPEC-DEBUG-005: REQ-ERR-006, REQ-ERR-011, REQ-ERR-012 - Standardized error handling
->>>>>>> main
  *
  * Path Parameters:
  * - id: Task UUID
@@ -284,11 +115,7 @@ tasksRouter.put('/:id/status', async (req: Request, res: Response): Promise<void
  *
  * Response: ApiResponse<Task>
  * - 200: AI generation successful, task updated
-<<<<<<< HEAD
  * - 400: Invalid target status or missing target status
-=======
- * - 400: Invalid target status, missing target status, LLM config error, or prerequisite missing
->>>>>>> main
  * - 404: Task not found
  * - 500: Server error
  */
@@ -299,260 +126,29 @@ tasksRouter.post('/:id/trigger-ai', async (req: Request, res: Response): Promise
 
     // Validate targetStatus is provided
     if (!targetStatus) {
-<<<<<<< HEAD
       sendError(res, 400, 'Target status is required');
-=======
-      sendApiErrorFromBuilder(res, buildMissingRequiredFieldError('targetStatus'), 400);
->>>>>>> main
       return;
     }
 
     // Validate targetStatus value
     if (!isValidStatus(targetStatus)) {
-<<<<<<< HEAD
       sendError(res, 400, 'Invalid target status. Must be one of: featurelist, design, prd, prototype');
-=======
-      sendApiErrorFromBuilder(res, buildInvalidStatusError(targetStatus), 400);
->>>>>>> main
       return;
     }
 
     // Check if task exists
     const taskResult = await getTaskById(id);
     if (!taskResult) {
-<<<<<<< HEAD
       sendError(res, 404, 'Task not found');
       return;
     }
 
     // Generate AI content (mock implementation)
     const aiGeneratedContent = generateMockAIContent(taskResult.task, targetStatus as TaskStatus);
-=======
-      sendApiErrorFromBuilder(res, buildTaskNotFoundError(id), 404);
-      return;
-    }
-
-    const task = taskResult.task;
-    let aiGeneratedContent: Partial<typeof task> = { status: targetStatus as TaskStatus };
-
-    // SPEC-DEBUG-005: Generate AI content based on target status using configured LLM provider
-    if (targetStatus === 'prd') {
-      // SPEC-DEBUG-005: REQ-ERR-011 - PRD generation requires Design Document
-      if (!task.designDocument) {
-        sendApiErrorFromBuilder(
-          res,
-          buildPrerequisiteMissingError('designDocument', 'prd'),
-          400
-        );
-        return;
-      }
-
-      // Build PRD prompt from GDD (Game Design Document)
-      const prompt = buildPRDPrompt(task.designDocument);
-      const fullPrompt = `
-## Task Information
-- Title: ${task.title}
-
-${prompt}
-
-## Additional Instructions
-- Write the PRD in Korean (한국어)
-- Focus on practical implementation details for developers
-- Extract technical requirements from the Game Design Document
-`;
-
-      try {
-        // SPEC-DEBUG-004: Select LLM provider based on project settings
-        const { provider, config, isDefault } = await selectLLMProvider(
-          taskResult.projectId,
-          'prd'
-        );
-
-        let generatedContent: string;
-
-        // If using default Claude Code, use the claudeCodeRunner
-        if (isDefault) {
-          const result = await callClaudeCode(fullPrompt, process.cwd(), {
-            timeout: 300000,
-            allowedTools: ['Read', 'Grep'],
-          });
-
-          if (result.output && typeof result.output === 'object' && 'result' in result.output) {
-            generatedContent = (result.output as { result: string }).result;
-          } else if (result.rawOutput) {
-            try {
-              const parsed = JSON.parse(result.rawOutput);
-              generatedContent = parsed.result || result.rawOutput;
-            } catch {
-              generatedContent = result.rawOutput;
-            }
-          } else {
-            throw new Error('No content generated from Claude Code');
-          }
-        } else {
-          // Use selected LLM provider
-          const result = await provider.generate(fullPrompt, config, process.cwd());
-
-          if (!result.success) {
-            sendApiErrorFromBuilder(
-              res,
-              buildLLMGenerationFailedError(result.error || 'Unknown error', config.provider as any, config.modelId),
-              500
-            );
-            return;
-          }
-
-          generatedContent = result.content as string;
-        }
-
-        aiGeneratedContent = {
-          status: 'prd' as TaskStatus,
-          prd: generatedContent,
-        };
-
-        // Record generation history (SPEC-MODELHISTORY-001)
-        try {
-          await addGenerationHistoryEntry(taskResult.projectId, id, {
-            documentType: 'prd',
-            action: 'create',
-            provider: config.provider as LLMProvider,
-            model: config.modelId,
-          });
-        } catch (historyError) {
-          console.error('Failed to record PRD generation history:', historyError);
-        }
-      } catch (aiError) {
-        console.error('AI PRD generation failed:', aiError);
-
-        // SPEC-DEBUG-005: REQ-ERR-006 - Return 400 for LLM config errors
-        const errorMessage = (aiError as Error).message;
-        if (
-          errorMessage.includes('Invalid LLM provider') ||
-          errorMessage.includes('configuration') ||
-          errorMessage.includes('provider')
-        ) {
-          sendApiErrorFromBuilder(res, buildLLMConfigMissingError(), 400);
-          return;
-        }
-
-        sendApiError(res, 500, 'Failed to generate PRD with AI');
-        return;
-      }
-    } else if (targetStatus === 'prototype') {
-      // SPEC-DEBUG-005: REQ-ERR-012 - Prototype generation requires PRD
-      if (!task.prd) {
-        sendApiErrorFromBuilder(
-          res,
-          buildPrerequisiteMissingError('prd', 'prototype'),
-          400
-        );
-        return;
-      }
-
-      // Build Prototype prompt from PRD
-      const prompt = buildPrototypePrompt(task.prd);
-      const fullPrompt = `
-## Task Information
-- Title: ${task.title}
-
-${prompt}
-
-## Additional Instructions
-- Generate a single, self-contained HTML file
-- Include all CSS and JavaScript inline
-- Use Tailwind CSS via CDN for styling
-- Make the prototype interactive and visually appealing
-- Include Korean text where appropriate
-`;
-
-      try {
-        // SPEC-DEBUG-004: Select LLM provider based on project settings
-        const { provider, config, isDefault } = await selectLLMProvider(
-          taskResult.projectId,
-          'prototype'
-        );
-
-        let generatedContent: string;
-
-        // If using default Claude Code, use the claudeCodeRunner
-        if (isDefault) {
-          const result = await callClaudeCode(fullPrompt, process.cwd(), {
-            timeout: 300000,
-            allowedTools: ['Read', 'Grep'],
-          });
-
-          if (result.output && typeof result.output === 'object' && 'result' in result.output) {
-            generatedContent = (result.output as { result: string }).result;
-          } else if (result.rawOutput) {
-            try {
-              const parsed = JSON.parse(result.rawOutput);
-              generatedContent = parsed.result || result.rawOutput;
-            } catch {
-              generatedContent = result.rawOutput;
-            }
-          } else {
-            throw new Error('No content generated from Claude Code');
-          }
-        } else {
-          // Use selected LLM provider
-          const result = await provider.generate(fullPrompt, config, process.cwd());
-
-          if (!result.success) {
-            sendApiErrorFromBuilder(
-              res,
-              buildLLMGenerationFailedError(result.error || 'Unknown error', config.provider as any, config.modelId),
-              500
-            );
-            return;
-          }
-
-          generatedContent = result.content as string;
-        }
-
-        aiGeneratedContent = {
-          status: 'prototype' as TaskStatus,
-          prototype: generatedContent,
-        };
-
-        // Record generation history (SPEC-MODELHISTORY-001)
-        try {
-          await addGenerationHistoryEntry(taskResult.projectId, id, {
-            documentType: 'prototype',
-            action: 'create',
-            provider: config.provider as LLMProvider,
-            model: config.modelId,
-          });
-        } catch (historyError) {
-          console.error('Failed to record Prototype generation history:', historyError);
-        }
-      } catch (aiError) {
-        console.error('AI Prototype generation failed:', aiError);
-
-        // SPEC-DEBUG-005: REQ-ERR-006 - Return 400 for LLM config errors
-        const errorMessage = (aiError as Error).message;
-        if (
-          errorMessage.includes('Invalid LLM provider') ||
-          errorMessage.includes('configuration') ||
-          errorMessage.includes('provider')
-        ) {
-          sendApiErrorFromBuilder(res, buildLLMConfigMissingError(), 400);
-          return;
-        }
-
-        sendApiError(res, 500, 'Failed to generate Prototype with AI');
-        return;
-      }
-    } else {
-      // For other statuses (featurelist, design), just update status
-      // Design document is generated via Q&A flow, not here
-      aiGeneratedContent = { status: targetStatus as TaskStatus };
-    }
->>>>>>> main
 
     // Update task with AI generated content
     const updatedTask = await updateTask(id, aiGeneratedContent);
     if (!updatedTask) {
-<<<<<<< HEAD
       sendError(res, 500, 'Failed to update task with AI content');
       return;
     }
@@ -561,16 +157,6 @@ ${prompt}
   } catch (error) {
     console.error('Error triggering AI generation:', error);
     sendError(res, 500, 'Failed to trigger AI generation');
-=======
-      sendApiError(res, 500, 'Failed to update task with AI content');
-      return;
-    }
-
-    sendApiSuccess(res, updatedTask);
-  } catch (error) {
-    console.error('Error triggering AI generation:', error);
-    sendApiError(res, 500, 'Failed to trigger AI generation');
->>>>>>> main
   }
 });
 
@@ -621,10 +207,6 @@ tasksRouter.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
 /**
  * DELETE /api/tasks/:id - Delete a task
-<<<<<<< HEAD
-=======
- * SPEC-DEBUG-005: Standardized error handling
->>>>>>> main
  *
  * Path Parameters:
  * - id: Task UUID
@@ -640,7 +222,6 @@ tasksRouter.delete('/:id', async (req: Request, res: Response): Promise<void> =>
 
     const deleted = await deleteTask(id);
     if (!deleted) {
-<<<<<<< HEAD
       sendError(res, 404, 'Task not found');
       return;
     }
@@ -649,16 +230,6 @@ tasksRouter.delete('/:id', async (req: Request, res: Response): Promise<void> =>
   } catch (error) {
     console.error('Error deleting task:', error);
     sendError(res, 500, 'Failed to delete task');
-=======
-      sendApiErrorFromBuilder(res, buildTaskNotFoundError(id), 404);
-      return;
-    }
-
-    sendApiSuccess(res, { deleted: true });
-  } catch (error) {
-    console.error('Error deleting task:', error);
-    sendApiError(res, 500, 'Failed to delete task');
->>>>>>> main
   }
 });
 

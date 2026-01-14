@@ -245,7 +245,7 @@ export function EnhancedDocumentEditor({
    * Keyboard shortcut extensions
    * Using useMemo to calculate extensions based on dependencies
    */
-  /* eslint-disable react-hooks/refs -- Ref access happens in keymap run callback, not during render */
+   
   const keyboardExtensions = useMemo(() => {
     if (readOnly) return [];
 
@@ -289,7 +289,7 @@ export function EnhancedDocumentEditor({
       ]),
     ];
   }, [readOnly, handleManualSave, insertMarkdownFormatting, insertCodeBlock]);
-  /* eslint-enable react-hooks/refs */
+   
 
   /**
    * Cleanup on unmount
