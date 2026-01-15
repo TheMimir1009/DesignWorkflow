@@ -204,10 +204,27 @@ secret-*.*
 # Node.js (for docs/Nextra)
 # ===========================================
 node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 *.tsbuildinfo
 .tscache/
 .next/
 out/
+
+# Vite
+.vite/
+
+# Test Coverage
+coverage/
+.nyc_output/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # ===========================================
 # Build Tools & Frameworks
