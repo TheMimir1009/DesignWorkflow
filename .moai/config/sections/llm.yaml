@@ -9,10 +9,6 @@ llm:
   # - glm-only: Use GLM for all phases (lowest cost)
   mode: mashup
 
-  # Environment variable name for GLM API token
-  # User must set this in their shell profile (~/.zshrc, ~/.bashrc)
-  glm_env_var: GLM_API_TOKEN
-
   # Auto worktree settings
   # When hybrid mode is enabled, automatically create worktree with GLM config
   auto_worktree:
@@ -20,9 +16,13 @@ llm:
     copy_glm_config: true   # Copy GLM settings.local.json to worktree
 
   # GLM API Configuration
-  # These values are used in .moai/llm-configs/glm.json template
+  # IMPORTANT: Claude Code settings.local.json does NOT support ${ENV_VAR} interpolation
+  # The API key must be directly specified in .moai/llm-configs/glm.json
+  # This is a Claude Code limitation - env section only SETs variables, not reads them
   glm:
     base_url: "https://api.z.ai/api/anthropic"
+    # API key is configured directly in .moai/llm-configs/glm.json
+    # To update the key: edit glm.json and recreate worktrees
     models:
       haiku: "glm-4.7"
       sonnet: "glm-4.7"
